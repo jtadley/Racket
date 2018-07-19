@@ -1,0 +1,226 @@
+#lang pie
+
+;; Exercise Set 3
+;; Ch 7 (induction)
+;; Due by 5pm on Friday, February 16th
+
+;; (initial draft! more exercises will be added at a later date
+;;  and a due date will then be specified)
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Exercise 1
+;; Use ind-Nat to define sum by completing the following
+;; definition.
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+(claim sum (-> Nat Nat Nat))
+(define sum
+  (λ (n m)
+    (ind-Nat n
+      (λ (x) Nat)
+      m
+      (λ (n-1 m+n-1)
+        (add1 m+n-1)))))
+
+(check-same Nat (sum 1 0) 1)
+(check-same Nat (sum 0 1) 1)
+(check-same Nat (sum 1 2) 3)
+(check-same Nat (sum 2 1) 3)
+
+
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Exercise 2
+;; Use ind-Nat to define plus by completing the following
+;; definition.
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+(claim plus (-> Nat Nat Nat))
+(define plus
+  (λ (n)
+    (ind-Nat n
+      (λ (m) (-> Nat Nat))
+      (λ (m) m)
+      (λ (n-1 max-n-1-else)
+        (λ (m)
+          (add1 (max-n-1-else m)))))))
+
+(check-same Nat (plus 1 0) 1)
+(check-same Nat (plus 0 1) 1)
+(check-same Nat (plus 1 2) 3)
+(check-same Nat (plus 2 1) 3)
+
+
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Exercise 3
+;; Use ind-Nat to define repeat,
+;; which takes an E e, a Nat k,
+;; and builds a (Vec E k) where
+;; each entry is the same E as e
+;;
+;; e.g. (repeat Nat 2 42) ==> (vec:: 42 (vec:: 42 vecnil))
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+(claim mot-repeat
+  (-> U Nat U))
+(define mot-repeat
+  (λ (E)
+    (λ (n)
+      (Vec E n))))
+
+(claim base-repeat
+  (Π ([E U])
+    (Vec E zero)))
+(define base-repeat
+  (λ (E)
+    vecnil))
+
+(claim step-repeat
+  (Π ([E U]
+      [e E]
+      [n-1 Nat])
+    (-> (Vec E n-1)
+      (Vec E (add1 n-1)))))
+(define step-repeat
+  (λ (E e)
+    (λ (n-1 repeat-n-1)
+      (vec:: e repeat-n-1))))
+
+(claim repeat
+  (Π ([E U]
+      [k Nat])
+    (-> E (Vec E k))))
+(define repeat
+  (λ (E k e)
+    (ind-Nat k
+      (mot-repeat E) ;(λ (n) (Vec E n))
+      (base-repeat E) ;vecnil
+      (step-repeat E e) ;(λ (n-1 repeat-n-1) (vec:: e repeat-n-1))
+      )))
+
+(check-same (Vec Nat 0) (repeat Nat 0 42) vecnil)
+(check-same (Vec Atom 1) (repeat Atom 1 'Albuquerque) (vec:: 'Albuquerque vecnil))
+(check-same (Vec Nat 2)
+  (repeat Nat 2 3)
+  (vec:: 3 (vec:: 3 vecnil)))
+
+
+
+
+(claim + (-> Nat Nat Nat))
+(define + (λ (x y) (iter-Nat x y (λ (x) (add1 x)))))
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Exercise 4
+;; Use ind-Nat to define add-to-front,
+;; which takes an E e, a Nat n, a Nat k,
+;; and a (Vec E k), and returns a
+;; (Vec E (+ n k) where each new entry
+;; added to the front is the same E as e.
+;;
+;; e.g. (add-to-front Atom 'a 2 3 (vec:: 'r (vec:: 'o (vec:: 'n vecnil))))
+;;       ==>
+;;      (vec:: 'a (vec:: 'a (vec:: 'r (vec:: 'o (vec:: 'n vecnil)))))b
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+(claim mot-add-to-front
+  (-> U Nat Nat U))
+(define mot-add-to-front
+  (λ (E k n)
+    (Vec E (+ n k))))
+
+(claim base-add-to-front
+  (Π ([E U]
+      [k Nat])
+    (-> (Vec E k)
+      (Vec E k))))
+(define base-add-to-front
+  (λ (E k)
+    (λ (es)
+      es)))
+
+(claim step-add-to-front
+  (Π ([E U]
+      [k Nat]
+      [e E]
+      [n-1 Nat])
+    (-> (Vec E (+ n-1 k))
+      (Vec E (add1 (+ n-1 k))))))
+(define step-add-to-front
+  (λ (E)
+    (λ (k e)
+      (λ (n-1 add-to-front-n-1)
+        (vec:: e add-to-front-n-1)))))
+
+(claim add-to-front
+  (Π ([E U]
+      [n Nat]
+      [k Nat])
+    (-> E (Vec E k)
+      (Vec E (+ n k)))))
+(define add-to-front
+  (λ (E n k e es)
+    (ind-Nat n
+      (mot-add-to-front E k);(λ (n) (Vec E (+ n k)))
+      (base-add-to-front E k es);es
+      (step-add-to-front E k e) ;(λ (n-1 add-to-front-n-1) (vec:: e add-to-front-n-1))
+      )))
+
+(check-same (Vec Atom 0)
+  (add-to-front Atom 0 0 'empty vecnil)
+  vecnil)
+(check-same (Vec Atom 2)
+  (add-to-front Atom 1 1 'key (vec:: 'peele vecnil))
+  (vec:: 'key (vec:: 'peele vecnil)))
+(check-same (Vec Atom 5)
+  (add-to-front Atom 2 3 'a (vec:: 'r (vec:: 'o (vec:: 'n vecnil))))
+  (vec:: 'a (vec:: 'a (vec:: 'r (vec:: 'o (vec:: 'n vecnil))))))
+
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Exercise 5
+;; Define append as a function which appends two vectors
+;; together by completing the below definition.
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+(claim append
+  (Π ([E U]
+      [n Nat]
+      [m Nat])
+    (-> (Vec E n) (Vec E m)
+      (Vec E (+ n m)))))
+(define append
+  (λ (E n m)
+    (ind-Nat n
+      (λ (x)
+        (-> (Vec E x) (Vec E m)
+          (Vec E (+ x m))))
+      (λ (vec-n vec-m)
+        vec-m)
+      (λ (n-1 append-n-1-else)
+        (λ (vec-n-1 vec-m)
+          (vec:: (head vec-n-1)
+            (append-n-1-else (tail vec-n-1) vec-m)))))))
+
+
+(check-same (Vec Nat 5)
+  (append Nat 2 3
+    (vec:: 0 (vec:: 1 vecnil))
+    (vec:: 2 (vec:: 3 (vec:: 4 vecnil))))
+  (vec:: 0 (vec:: 1 (vec:: 2 (vec:: 3 (vec:: 4 vecnil))))))
+(check-same (Vec Nat 5)
+  (append Nat 3 2
+    (vec:: 2 (vec:: 3 (vec:: 4 vecnil)))
+    (vec:: 0 (vec:: 1 vecnil)))
+  (vec:: 2 (vec:: 3 (vec:: 4 (vec:: 0 (vec:: 1 vecnil))))))
+(check-same (Vec Nat 0)
+  (append Nat 0 0
+    vecnil
+    vecnil)
+  vecnil)
+(check-same (Vec Nat 1)
+  (append Nat 1 0
+    (vec:: 42 vecnil)
+    vecnil)
+  (vec:: 42 vecnil))
+(check-same (Vec Nat 1)
+  (append Nat 0 1
+    vecnil
+    (vec:: 42 vecnil))
+  (vec:: 42 vecnil))

@@ -1,0 +1,452 @@
+#lang pie-a-let-mode
+
+;; Exercise Set 4
+;; Due Friday Feb 23
+;; Submit the URL to your solutions on Canvas
+;; before 5pm on the due date.
+
+;; Note: If you would like to use `let` to construct your
+;; programs/proofs, you'll need to install the `pie-a-let-mode`
+;; package and change the top line to `#lang pie-a-let-mode`
+
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Prelude
+;; (peruse and make sure you understand these definitions)
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+(claim id
+  (Π ([X U])
+    (-> X X)))
+(define id
+  (λ (X)
+    (λ (x) x)))
+
+(claim plus1
+  (-> Nat Nat))
+(define plus1
+  (λ (n) (add1 n)))
+
+(claim +
+  (-> Nat Nat Nat))
+(define +
+  (λ (n m)
+    (iter-Nat n
+      m
+      plus1)))
+
+(check-same Nat (+ 22 65) 87)
+
+(claim sub1
+  (-> Nat Nat))
+(define sub1
+  (λ (n)
+    (which-Nat n
+      zero
+      (λ (n-1) n-1))))
+
+(check-same Nat (sub1 0) 0)
+(check-same Nat (sub1 55) 54)
+
+
+(claim -
+  (-> Nat Nat Nat))
+(define -
+  (λ (n m)
+    (iter-Nat m
+      n
+      sub1)))
+
+(check-same Nat (- 1 2) 0)
+
+(check-same Nat (- 10 2) 8)
+
+
+(claim max
+  (-> Nat Nat
+    Nat))
+(define max
+  (lambda (n)
+    (rec-Nat n
+      ;; base case 0, max should just return
+      ;; the other number
+      (id Nat)
+      ;; assuming we have a function which can
+      ;; compute the max of k and some given number,
+      ;; return a function which can compute the
+      ;; max of k+1 and some given number
+      (λ (k max-of-k)
+        ;; this function is max-of-k+1
+        (λ (m)
+          (which-Nat m
+            ;; if the given number is 0,
+            ;; k+1 is the max
+            (add1 k)
+            ;; otherwise, the max of k+1 and m
+            ;; is 1 + (the max of k and m-1)
+            (λ (m-1)
+              (add1 (max-of-k m-1)))))))))
+
+(check-same Nat (max 2 5) 5)
+(check-same Nat (max 5 2) 5)
+
+
+;; forall n ∈ Nat, (+ 0 n) = n
+(claim +-left-zero
+  (Π ([n Nat])
+    (= Nat (+ 0 n) n)))
+(define +-left-zero
+  (λ (n)
+    (same n)))
+
+;; forall n ∈ Nat, (+ n 0) = n
+(claim +-right-zero
+  (Π ([n Nat])
+    (= Nat (+ n 0) n)))
+(define +-right-zero
+  (λ (n)
+    (ind-Nat n
+      (λ (k)
+        (= Nat (+ k 0) k))
+      (same 0)
+      (λ (k k+0=k)
+        (the (= Nat
+               (+ (plus1 k) 0)
+               (plus1 k))
+          (cong k+0=k plus1))))))
+
+(check-same (= Nat 5 (+ 5 0))
+  (+-right-zero 5)
+  (same 5))
+
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Part 1 (20%) (more Vec operations)
+;;
+;; Replace each TODO with an appropriate definition
+;; (i.e. it should type check and pass any given tests
+;;  that are currently commented out).
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+;; vec->list computes a List with the same
+;; entries in the same order as a Vec
+(claim mot-vec->list
+  (-> U Nat
+    U))
+(define mot-vec->list
+  (λ (E)
+    (λ (k)
+      (-> (Vec E k)
+        (List E)))))
+
+(claim base-vec->list
+  (Π ([E U])
+    (-> (Vec E zero)
+      (List E))))
+(define base-vec->list
+  (λ (E)
+    (λ (es)
+      (the (List E) nil))))
+
+(claim step-vec->list
+  (Π ([E U]
+      [l-1 Nat])
+    (-> (mot-vec->list E l-1)
+      (mot-vec->list E (add1 l-1)))))
+(define step-vec->list
+  (λ (E)
+    (λ (l-1)
+      (λ (vec->list-l-1)
+        (λ (es)
+          (:: (head es) (vec->list-l-1 (tail es))))))))
+
+(claim vec->list
+  (Π ([E U]
+      [n Nat])
+    (-> (Vec E n)
+      (List E))))
+(define vec->list
+  (λ (E)
+    (λ (n)
+      (ind-Nat n
+        (mot-vec->list E)
+        (base-vec->list E)
+        (step-vec->list E)))))
+
+
+(check-same (List Atom)
+  (vec->list Atom 4
+    (vec:: 'w
+      (vec:: 'm
+        (vec:: 'a
+          (vec:: 'a
+            vecnil)))))
+  (:: 'w
+    (:: 'm
+      (:: 'a
+        (:: 'a
+          nil)))))
+
+(check-same (List Nat)
+  (vec->list Nat 3 (vec:: 2 (vec:: 8 (vec:: 1 vecnil))))
+  (:: 2 (:: 8 (:: 1 nil))))
+
+
+
+;; snoc adds to the back of a Vec
+(claim snoc-Vec
+  (Π ([E U]
+      [n Nat])
+    (-> (Vec E n) E
+      (Vec E (add1 n)))))
+(define snoc-Vec
+  (λ (E)
+    (λ (n)
+      (ind-Nat n
+        (λ (k)
+          (-> (Vec E k) E
+            (Vec E (add1 k))))
+        (λ (v e)
+          (vec:: e vecnil))
+        (λ (k-1 snoc-Vec-k-1)
+          (λ (vec-of-k e)
+            (vec:: (head vec-of-k) (snoc-Vec-k-1 (tail vec-of-k) e))))))))
+
+
+(check-same (Vec Nat 1)
+  (snoc-Vec Nat 0 vecnil 23)
+  (vec:: 23 vecnil))
+
+
+(check-same (Vec Atom 2)
+  (snoc-Vec Atom 1
+    (vec:: 'pants vecnil)
+    'jacket)
+  (vec:: 'pants
+    (vec:: 'jacket
+      vecnil)))
+
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Part 2 (60%) (some equality proofs)
+;; Hint: Unless explicitly stated otherwise, each of these
+;; proofs can be done independently of one other, so feel
+;; free to jump around if you so desire.
+;;
+;; ;; Replace each TODO with an appropriate definition
+;; (i.e. it should type check and pass any given tests
+;;  that are currently commented out).
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+;; ∀ n,m ∈ Nat. (+ (add1 n) m) = (add1 (+ n m))
+(claim +-left-add1
+  (Π ([n Nat]
+      [m Nat])
+    (= Nat
+       (+ (add1 n) m)
+       (add1 (+ n m)))))
+(define +-left-add1
+  (λ (n m)
+    (same (+ (add1 n) m))))
+
+;; ∀ n,m ∈ Nat. (+ n (add1 m)) = (add1 (+ n m))
+(claim +-right-add1
+  (Π ([n Nat]
+      [m Nat])
+    (= Nat
+       (+ n (add1 m))
+       (add1 (+ n m)))))
+(define +-right-add1
+  (λ (n m)
+    (ind-Nat n
+      (λ (x) (= Nat (+ x (add1 m)) (add1 (+ x m))))
+      (the (= Nat (+ zero (add1 m)) (add1 (+ 0 m)))
+        (same (add1 m)))
+      (the (Π ([n-1 Nat])
+             (-> (= Nat
+                   (+ n-1 (add1 m))
+                   (add1 (+ n-1 m)))
+               (= Nat
+                 (+ (add1 n-1) (add1 m))
+                 (add1 (+ (add1 n-1) m)))))
+        (λ (n-1 IH)
+          (cong IH plus1))))))
+
+;;∀ x,y,z ∈ Nat. (+ x (+ y z)) = (+ (+ x y) z)
+#;#;
+(claim step-+-associative1)
+(define step-+-associative1)
+
+(claim +-associative1
+  (Π ([x Nat]
+      [y Nat]
+      [z Nat])
+    (= Nat
+     (+ x (+ y z))
+     (+ (+ x y) z))))
+(define +-associative1
+  (λ (x y z)
+    (ind-Nat x
+      (λ (q) (= Nat (+ q (+ y z)) (+ (+ q y) z)))
+      (same (+ y z))
+      (λ (n-1 IH)
+        (cong IH plus1)))))
+
+
+;;∀ x,y,z ∈ Nat. (+ (+ x y) z) = (+ x (+ y z))
+;; HINT: you just solved +-associative1...
+;; maybe that proof would be useful here.
+(claim +-associative2
+  (Π ([x Nat]
+      [y Nat]
+      [z Nat])
+    (= Nat
+     (+ (+ x y) z)
+     (+ x (+ y z)))))
+(define +-associative2
+  (λ (x y z)
+    (ind-Nat x
+      (λ (q) (= Nat (+ (+ q y) z) (+ q (+ y z))))
+      (same (+ y z))
+      (λ (n-1 IH)
+        (cong IH plus1)))))
+
+;; ∀n ∈ Nat. (max 0 n) = n
+(claim max-zero-left
+  (Π ([n Nat])
+    (= Nat (max 0 n) n)))
+(define max-zero-left
+  (λ (n)
+    (same n)))
+
+;; ∀n ∈ Nat. (max n 0) = n
+(claim max-zero-right
+  (Π ([n Nat])
+    (= Nat (max n 0) n)))
+(define max-zero-right
+  (λ (n)
+    (ind-Nat n
+      (λ (c) (= Nat (max c 0) c))
+      (same 0)
+      (λ (c-1 IH)
+        (same (add1 c-1))))))
+
+;; ∀n ∈ Nat. (max n n) = n
+(claim max-idempotent
+  (Π ([n Nat])
+    (= Nat n (max n n))))
+(define max-idempotent
+  (λ (n)
+    (ind-Nat n
+      (λ (c) (= Nat c (max c c)))
+      (same 0)
+      (λ (c-1 IH)
+        (cong IH plus1)))))
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Part 3 (10%)
+;; A (more challenging) vector problem which may benefit
+;; from previous programs/proofs.
+;;
+;; Replace the TODO with a definition that type checks and
+;; passes the commented out tests.
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+;; reverse-Vec constructs a new Vec of the same length,
+;; with the entries in the opposite order.
+(claim reverse-Vec
+  (Π ([E U]
+      [n Nat])
+    (-> (Vec E n)
+      (Vec E n))))
+(define reverse-Vec
+  (λ (E n)
+    (ind-Nat n
+             (λ (c) (-> (Vec E c) (Vec E c)))
+             (λ (v) vecnil)
+             (λ (c-1 reverse-vec-c-1)
+               (λ (vec-c)
+                 (snoc-Vec E c-1 (reverse-vec-c-1 (tail vec-c)) (head vec-c)))))))
+
+
+(check-same (Vec Nat 0)
+  (reverse-Vec Nat 0 vecnil) vecnil)
+(check-same (Vec Nat 3)
+  (reverse-Vec Nat 3 (vec:: 2 (vec:: 8 (vec:: 1 vecnil))))
+  (vec:: 1 (vec:: 8 (vec:: 2 vecnil))))
+
+
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;; Part 4 (10%)
+;; A (more challenging) equality problem which may benefit
+;; from previous programs/proofs.
+;;
+;; We've given you stubs for base-+-commutative and
+;; step-+-commutative --- feel free to use them (i.e.
+;; replace the TODO in each with a definition that type
+;; checks) if they are helpful, or delete them and write
+;; the proof for +-commutative however you want.
+;;
+;; Some partial credit may be earned for solutions that
+;; make progress but still have TODOs in them so long
+;; as those TODOs include comments describing your
+;; thinking and how/why you are stuck.
+;; * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+(claim +-right-1
+  (Π ([m Nat]
+      [k Nat])
+    (= Nat (add1 (+ m k))
+       (+ m (add1 k)))))
+(define +-right-1
+  (λ (m k)
+    (ind-Nat m
+      (λ (c) (= Nat (add1 (+ c k))
+               (+ c (add1 k))))
+      (same (add1 k))
+      (λ (c-1 IH)
+        (cong IH plus1)))))
+
+(claim base-+-commutative
+  (Π ([m Nat])
+    (= Nat (+ 0 m) (+ m 0))))
+(define base-+-commutative
+  (λ (m)
+    (ind-Nat m
+      (λ (k) (= Nat (+ 0 k) (+ k 0)))
+      (same 0)
+      (λ (k-1 IH)
+        (cong IH plus1)))))
+
+
+(claim step-+-commutative
+  (Π ([m Nat]
+      [k Nat])
+    (-> (= Nat (+ k m) (+ m k))
+      (= Nat (+ (add1 k) m) (+ m (add1 k))))))
+(define step-+-commutative
+  (λ (m k IH)
+    (equal Nat
+      (+ (add1 k) m)
+      #:by (same (add1 (+ k m)))
+      (add1 (+ k m))
+      #:by (cong IH plus1)
+      (add1 (+ m k))
+      #:by (+-right-1 m k)
+      (+ m (add1 k)))))
+
+;; ∀n,m ∈ Nat. (+ n m) = (+ m n)
+(claim +-commutative
+  (Π ([n Nat]
+      [m Nat])
+    (= Nat (+ n m) (+ m n))))
+(define +-commutative
+  (λ (n m)
+    (ind-Nat n
+      (λ (k)
+        (= Nat (+ k m) (+ m k)))
+      (base-+-commutative m)
+      (step-+-commutative m))))
+
