@@ -18,23 +18,43 @@
          partition?
          add
          #%app
-         ^ neg ¬ zero)
+         ^ neg ¬ zero :)
 
 (define ^ '^)
 (define neg 'neg)
 (define ¬ '¬)
 (define zero 'zero)
+(define : ':)
 
 (define-syntax (#%app stx)
-  (syntax-parse stx #:literals (^ neg ¬ zero)
+  (syntax-parse stx #:literals (zero)
     [(_ zero) #'(list zero)]
-    [(_ (a ^ b) ...)
-     #'(normalize (list (cons a b) ...))]
-    [(_ neg rest ...)
-     #'(append (list (cons -1 1)) (normalize (rest ...)))]
-    [(_ ¬ rest ...)
-     #'(append (list (cons -1 1)) (normalize (rest ...)))]
+    [(_ n rest ...)
+     #:when (number? (syntax-e #'n))
+     #'(normalize (parse-primal (list n rest ...)))]
+    [(_ n more rest ...)
+     #:when (or (equal? 'neg (syntax-e #'n))
+                (equal? '¬   (syntax-e #'n)))
+     (if (or (equal? 'neg (syntax-e #'more))
+             (equal? '¬   (syntax-e #'more)))
+         (error "only 1 negative per primal number")
+         #'(cons (cons -1 1) (#%app more rest ...)))]
+    [(_) #''()]
     [(_ e args ...) #'(#%plain-app e args ...)]))
+
+(define parse-primal
+  (λ (ls)
+    (match ls
+      [`(: . ,rest) (parse-primal rest)]      
+      ['() '()]
+      [`(,p) #:when (natural-prime? p)
+             (cons (cons p 1) (parse-primal (cdr ls)))]      
+      [`(,p ^ ,n . ,rest) #:when (and (natural-prime? p)
+                                         (natural? n))
+                          (cons (cons p n) (parse-primal rest))]
+      [`(,p ,n . ,rest) #:when (or (equal? : n)
+                                   (natural? n))
+                        (cons (cons p 1) (parse-primal (cons n rest)))])))
 
 (define normalize
   (λ (ls)

@@ -18,23 +18,55 @@
          partition?
          add
          #%app
-         ^ neg ¬ zero)
+         ^ neg ¬ zero :)
 
 (define ^ '^)
 (define neg 'neg)
 (define ¬ '¬)
 (define zero 'zero)
+(define : ':)
 
 (define-syntax (#%app stx)
-  (syntax-parse stx #:literals (^ neg ¬ zero)
+  (syntax-parse stx #:literals (zero)
     [(_ zero) #'(list zero)]
-    [(_ (a ^ b) ...)
-     #'(normalize (list (cons a b) ...))]
-    [(_ neg rest ...)
-     #'(append (list (cons -1 1)) (normalize (rest ...)))]
-    [(_ ¬ rest ...)
-     #'(append (list (cons -1 1)) (normalize (rest ...)))]
+    [(_ n rest ...)
+     #:when (number? (syntax-e #'n))
+     #'(normalize (parse-primal #'(n rest ...)))] ;here we can find a way to pass stx to parse-primal to preserve source location
+    [(_ n more rest ...)
+     #:when (or (equal? 'neg (syntax-e #'n))
+                (equal? '¬   (syntax-e #'n)))
+     (if (or (equal? 'neg (syntax-e #'more))
+             (equal? '¬   (syntax-e #'more)))
+         (raise-syntax-error #f "expected only 1 negative identifier" stx) ; #'(more ...)
+         #'(cons (cons -1 1) (#%app more rest ...)))]
+    [(_) #''()]
     [(_ e args ...) #'(#%plain-app e args ...)]))
+
+(define parse-primal
+  (λ (stx)
+    (syntax-parse stx #:literals (: ^)      
+      [(: rest ...)
+       (parse-primal #'(rest ...))]
+      [()
+       '()]
+      [(p)
+       (if (natural-prime? (syntax-e #'p))
+           (list (cons (syntax-e #'p) 1))
+           (raise-syntax-error #f "expected a natural prime number" #'p))]
+      [(p ^ n rest ...)
+       (if (natural-prime? (syntax-e #'p))
+           (if (natural? (syntax-e #'n))
+               (cons (cons (syntax-e #'p) (syntax-e #'n)) (parse-primal #'(rest ...)))
+               (raise-syntax-error "expected a natural number" #'n))
+           (raise-syntax-error "expected a natural prime number" #'p))]
+      [(p n rest ...)
+       (if (natural-prime? (syntax-e #'p))
+           (if (or (equal? ': (syntax-e #'n))
+                   (natural? (syntax-e #'n)))
+               (cons (cons (syntax-e #'p) 1) (parse-primal #'(n rest ...)))
+               (raise-syntax-error (format "epected one of (:, ^, natural number) in ~s" (syntax->datum #'n)) #'n))
+           (raise-syntax-error (format "expected a natural prime number at ~s" (syntax->datum #'p)) #'p))]
+      [_ (raise-syntax-error #f (format "no matchin clause for ~s in parse-primal" (syntax->datum stx)) stx)])))
 
 (define normalize
   (λ (ls)
