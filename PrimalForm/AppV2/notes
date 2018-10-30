@@ -1,0 +1,10 @@
+Notes on the project:
+
+negatives? +/- sign
+
+match
+	guards?(might just work) or sugar?
+
+normalize input data
+	1 ^ 7 -> ignored
+	don't have to write x ^ 1 -> converts to (x . 1)
