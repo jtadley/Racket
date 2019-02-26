@@ -18,11 +18,13 @@
 
 (define WIDTH 800)
 (define HEIGHT 800)
-(define line_color "black")
+(define line_color (color 0 0 0))
+(define rainbow? #t)
 (define diff_n 0) ; should be set to number of init points - 1
 (define progression_factor 0.05)
+(define randomness_factor 0) ; integer [0,inf)
 (define over_edge? #f)
-(define tick-speed 0.005)
+(define tick-speed 0.01)
 (define side_len 5)
 (define start_posn (posn (/ WIDTH 2) (/ HEIGHT 2)))
 
@@ -40,19 +42,41 @@
                              (helper (sub1 n))))]))])
       (helper n))))
 
+(define mutate-line-color
+  (λ ()
+    (let ([r (color-red line_color)]
+          [g (color-green line_color)]
+          [b (color-blue line_color)])
+      (if (equal? r 125)
+          (if (equal? g 125)
+              (if (equal? b 125)
+                  (set! line_color
+                        (color 0 0 0))
+                  (set! line_color
+                        (color r g (+ b 5))))
+              (set! line_color
+                    (color r (+ g 5) b)))
+          (set! line_color
+                (color (+ r 5) g b))))))
+
 (define draw_world
   (λ (world)
     (cond
       [(or (null? world)
            (null? (cdr world)))
        (empty-scene WIDTH HEIGHT)]
-      [else (add-line
+      [else (if rainbow?
+                (mutate-line-color)
+                (void))
+            (add-line
              (draw_world (cdr world))
              (posn-x (car world))
              (posn-y (car world))
              (posn-x (car (cdr world)))
              (posn-y (car (cdr world)))
-             line_color)])))
+             (color (color-red line_color)
+                    (color-green line_color)
+                    (color-blue line_color)))])))
 
 (define cdr_n
   (λ (ls n)
@@ -73,8 +97,12 @@
               [p_along_y (posn-y p_along)]
               [d_x (- p_along_x p_start_x)]
               [d_y (- p_along_y p_start_y)]
-              [new_x (+ (* d_x progression_factor) p_along_x)]
-              [new_y (+ (* d_y progression_factor) p_along_y)])
+              [new_x (+
+                      (+ (* d_x progression_factor) p_along_x)
+                      (* randomness_factor (random)))]
+              [new_y (+
+                      (+ (* d_y progression_factor) p_along_y)
+                      (* randomness_factor (random)))])
          (posn new_x new_y))])))
 
 (define is_over_edge?
@@ -114,21 +142,25 @@
 
 (define go_fake_3
   (λ ()
+    (set! over_edge? #f)
     (set! diff_n 2)
     (go init_world_3)))
 
 (define go_fake_5
   (λ ()
+    (set! over_edge? #f)
     (set! diff_n 4)
     (go init_world_5)))
 
 (define go_n
   (λ (n)
+    (set! over_edge? #f)
     (set! diff_n (sub1 n))
     (go (poly_points n))))
 
 (define go
   (λ (init_world)
+    (set! over_edge? #f)
     (big-bang init_world
       (to-draw draw_world)
       (on-tick tick_controls tick-speed))))
