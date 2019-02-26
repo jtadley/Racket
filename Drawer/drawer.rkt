@@ -19,9 +19,26 @@
 (define WIDTH 800)
 (define HEIGHT 800)
 (define line_color "black")
-(define diff_n 2) ; should be set to number of init points - 1
-(define progress_factor 0.1)
+(define diff_n 0) ; should be set to number of init points - 1
+(define progression_factor 0.05)
 (define over_edge? #f)
+(define tick-speed 0.005)
+(define side_len 5)
+(define start_posn (posn (/ WIDTH 2) (/ HEIGHT 2)))
+
+(define poly_points
+  (λ (n)
+    (letrec ([dst (/ (* 2 pi) n)]
+             [helper
+              (λ (n)
+                (cond
+                  [(zero? n) '()]
+                  [else (let ([angle (* (sub1 n) dst)])
+                            (cons
+                             (posn (+ (* (cos angle) side_len) (posn-x start_posn))
+                                   (+ (* (sin angle) side_len) (posn-y start_posn)))
+                             (helper (sub1 n))))]))])
+      (helper n))))
 
 (define draw_world
   (λ (world)
@@ -56,8 +73,8 @@
               [p_along_y (posn-y p_along)]
               [d_x (- p_along_x p_start_x)]
               [d_y (- p_along_y p_start_y)]
-              [new_x (+ (* d_x progress_factor) p_along_x)]
-              [new_y (+ (* d_y progress_factor) p_along_y)])
+              [new_x (+ (* d_x progression_factor) p_along_x)]
+              [new_y (+ (* d_y progression_factor) p_along_y)])
          (posn new_x new_y))])))
 
 (define is_over_edge?
@@ -81,9 +98,37 @@
                world)))
         world)))
 
-(define init_world_3 (list (posn 398 402) (posn 400 398) (posn 402 402)))
-(define init_world_5 (list (posn 398 400) (posn 398 400) (posn 399 402) (posn 401 402) (posn 402 400)))
+(define init_world_3
+  (list
+   (posn 398 402)
+   (posn 400 398)
+   (posn 402 402)))
 
-(big-bang init_world_3
-          (to-draw draw_world)
-          (on-tick tick_controls 0.05))
+(define init_world_5
+  (list
+   (posn 398 400)
+   (posn 398 400)
+   (posn 399 402)
+   (posn 401 402)
+   (posn 402 400)))
+
+(define go_fake_3
+  (λ ()
+    (set! diff_n 2)
+    (go init_world_3)))
+
+(define go_fake_5
+  (λ ()
+    (set! diff_n 4)
+    (go init_world_5)))
+
+(define go_n
+  (λ (n)
+    (set! diff_n (sub1 n))
+    (go (poly_points n))))
+
+(define go
+  (λ (init_world)
+    (big-bang init_world
+      (to-draw draw_world)
+      (on-tick tick_controls tick-speed))))
