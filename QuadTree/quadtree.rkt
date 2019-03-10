@@ -3,8 +3,34 @@
 ; Jacob Adley
 
 (require
-  racket/struct)
+  racket/struct
+  2htdp/image
+  2htdp/universe)
 
+
+(define WIDTH 800)
+(define HEIGHT 800)
+(define node-color (color 255 102 255))
+(define node-radius 3)
+
+                             
+;           ;                           
+;           ;              ;            
+;           ;              ;            
+;           ;              ;            
+;           ;              ;;           
+;           ;              ;;;          
+;           ;            ;;;;           
+;      ;;;  ;     ;;;      ;;      ;;;  
+;     ;  ;; ;   ;;   ;     ;;    ;;   ; 
+;    ;     ;;        ;     ;;         ; 
+;   ;       ;        ;      ;         ; 
+;   ;       ;     ;; ;      ;      ;; ; 
+;   ;      ;;   ;;  ;;      ;    ;;  ;; 
+;   ;     ;;;   ;   ;;      ;    ;   ;; 
+;   ;;   ;; ;   ;  ; ;      ;    ;  ; ; 
+;     ;;;   ;   ;;;  ;      ;    ;;;  ; 
+;           ;                           
 (struct posn
   (x ;number
    y ;number
@@ -53,6 +79,21 @@
                    (node-sw n)
                    (node-se n)))))])
 
+
+                
+;       ;;;;   ;;;;;;     ;;;; 
+;     ;;    ;  ;;    ;   ;;    
+;    ;;     ; ;;     ;  ;      
+;   ;;      ;  ;     ;  ;      
+;   ;       ;  ;    ;    ;;    
+;   ;       ;  ;    ;      ;;  
+;   ;      ;   ;   ;         ; 
+;   ;      ;   ;;;;          ; 
+;    ;    ;    ;        ;;  ;; 
+;     ;;;;      ;        ;;;;  
+;               ;              
+;               ;              
+;               ;              
 (define two-posn-node
   (λ (bounds p1 p2)
     (let* ([x1 (posn-x p1)]
@@ -175,16 +216,160 @@
             ;shouldn't get here
             [else (error "could not find a place in box for posn")])))))
 
+; expects a node, posn, or E
+(define size
+  (λ (v)
+    (cond
+      [(E? v) 0]
+      [(posn? v) 1]
+      [(node? v) (+ (size (node-nw v))
+                    (size (node-ne v))
+                    (size (node-sw v))
+                    (size (node-se v)))])))
+
 (define init
-  (node (box 0 0 800 800 400 400)
+  (node (box 0 0 WIDTH HEIGHT (/ WIDTH 2) (/ HEIGHT 2))
         (E)
         (E)
         (E)
         (E)))
 
+
+                                   
+;                                            
+;      ;                         ;           
+;      ;                         ;           
+;      ;                         ;           
+;      ;;                        ;;          
+;      ;;;                       ;;;         
+;    ;;;;                      ;;;;          
+;      ;;     ;;;;      ;;;;     ;;     ;;;; 
+;      ;;    ;;  ;     ;;        ;;    ;;    
+;      ;;    ;    ;   ;          ;;   ;      
+;       ;   ;    ;;   ;           ;   ;      
+;       ;   ;;;;;      ;;         ;    ;;    
+;       ;   ;            ;;       ;      ;;  
+;       ;   ;      ;       ;      ;        ; 
+;       ;    ;   ;;        ;      ;        ; 
+;       ;     ;;;;    ;;  ;;      ;   ;;  ;; 
+;                      ;;;;            ;;;;  
 (module+ test
   (require rackunit)
 
-  (insert (posn 3 3)
-          (insert (posn 4 4)
-                  init)))
+  (check-equal?
+   (size init)
+   0)
+
+  (check-equal?
+   (size (insert (posn 3 3)
+                 (insert (posn 4 4)
+                         init)))
+   2))
+
+
+                                                                                              
+;           ;                                                                           ;           ; 
+;           ;                                                                           ;           ; 
+;           ;                                                                           ;           ; 
+;           ;                                                                           ;           ; 
+;           ;                                                                           ;           ; 
+;           ;                                                                           ;           ; 
+;           ;                                                                           ;           ; 
+;      ;;;  ;   ;         ;;;   ;        ;                ;        ;     ;;;;   ;       ;      ;;;  ; 
+;     ;  ;; ;   ;   ;;  ;;   ;  ;       ;                 ;       ;    ;;    ;  ;   ;;  ;     ;  ;; ; 
+;    ;     ;;   ;  ;         ;  ;       ;   ;;            ;       ;   ;;     ;  ;  ;    ;    ;     ;; 
+;   ;       ;   ; ;;         ;  ;       ;   ;;;;;;;;;;;   ;       ;  ;;      ;  ; ;;    ;   ;       ; 
+;   ;       ;   ;;;       ;; ;   ;  ;   ;                  ;  ;   ;  ;       ;  ;;;     ;   ;       ; 
+;   ;      ;;   ;;      ;;  ;;   ; ; ; ;                   ; ; ; ;   ;       ;  ;;      ;   ;      ;; 
+;   ;     ;;;    ;      ;   ;;   ; ;  ;;                   ; ;  ;;   ;      ;    ;      ;   ;     ;;; 
+;   ;;   ;; ;    ;      ;  ; ;   ;;   ;;                   ;;   ;;   ;      ;    ;      ;   ;;   ;; ; 
+;     ;;;   ;    ;      ;;;  ;    ;    ;                    ;    ;    ;    ;     ;            ;;;   ; 
+;           ;                                                          ;;;;                         ; 
+(define get-color
+  (λ (depth)
+    (cond
+      [(eqv? depth 0) (color 229 204 255)]
+      [(eqv? depth 1) (color 204 153 255)]
+      [(eqv? depth 2) (color 178 102 255)]
+      [(eqv? depth 3) (color 153 51 255)]
+      [(eqv? depth 4) (color 127 0 255)]
+      [(eqv? depth 5) (color 102 0 204)]
+      [(eqv? depth 6) (color 76 0 153)]
+      [(eqv? depth 6) (color 51 0 102)]
+      [(eqv? depth 6) (color 25 0 51)])))
+
+(define draw-world
+  (λ (world)
+    (define scene (empty-scene WIDTH HEIGHT))
+    (letrec ([helper
+              (λ (n depth)
+                (let ([bounds (node-bounds n)]
+                      [nw (node-nw n)]
+                      [ne (node-ne n)]
+                      [sw (node-sw n)]
+                      [se (node-se n)])
+                  (set! scene (place-image
+                               (rectangle
+                                (- (box-xmax bounds)
+                                   (box-xmin bounds))
+                                (- (box-ymax bounds)
+                                   (box-ymin bounds))
+                                "solid"
+                                (get-color depth))
+                               (box-xmin bounds)
+                               (box-ymin bounds)
+                               scene))
+                  (if (node? nw)
+                      (helper nw (add1 depth))
+                      (void))
+                  (if (node? ne)
+                      (helper ne (add1 depth))
+                      (void))
+                  (if (node? sw)
+                      (helper sw (add1 depth))
+                      (void))
+                  (if (node? se)
+                      (helper se (add1 depth))
+                      (void))
+                  (if (posn? nw)
+                      (set! scene (place-image
+                                   (circle
+                                    node-radius
+                                    "solid"
+                                    node-color)
+                                   (+ (posn-x nw) (/ node-radius 2))
+                                   (+ (posn-y nw) (/ node-radius 2))
+                                   scene))
+                      (void))
+                  (if (posn? ne)
+                      (set! scene (place-image
+                                   (circle
+                                    node-radius
+                                    "solid"
+                                    node-color)
+                                   (+ (posn-x ne) (/ node-radius 2))
+                                   (+ (posn-y ne) (/ node-radius 2))
+                                   scene))
+                      (void))
+                  (if (posn? sw)
+                      (set! scene (place-image
+                                   (circle
+                                    node-radius
+                                    "solid"
+                                    node-color)
+                                   (+ (posn-x sw) (/ node-radius 2))
+                                   (+ (posn-y sw) (/ node-radius 2))
+                                   scene))
+                      (void))
+                  (if (posn? se)
+                      (set! scene (place-image
+                                   (circle
+                                    node-radius
+                                    "solid"
+                                    node-color)
+                                   (+ (posn-x se) (/ node-radius 2))
+                                   (+ (posn-y se) (/ node-radius 2))
+                                   scene))
+                      (void))))])
+      (helper world 0)
+      scene)))

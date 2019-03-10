@@ -8,7 +8,7 @@
   2htdp/universe
   rackunit)
 
-(define fName "life_init3")
+(define fName "life_init1") ;live_init3
 
 (define SCREEN_WIDTH 1000)
 

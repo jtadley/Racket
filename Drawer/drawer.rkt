@@ -19,13 +19,13 @@
 (define WIDTH 800)
 (define HEIGHT 800)
 (define line_color (color 0 0 0))
-(define rainbow? #t)
+(define rainbow? #f)
 (define diff_n 0) ; should be set to number of init points - 1
-(define progression_factor 0.05)
+(define progression_factor 0.05) ;.05
 (define randomness_factor 0) ; integer [0,inf)
 (define over_edge? #f)
 (define tick-speed 0.01)
-(define side_len 5)
+(define side_len 7) ;5
 (define start_posn (posn (/ WIDTH 2) (/ HEIGHT 2)))
 
 (define poly_points
