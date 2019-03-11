@@ -42,6 +42,11 @@
       (λ (p) (list (posn-x p)
                    (posn-y p)))))])
 
+(define posn-=?
+  (λ (p1 p2)
+    (and (equal? (posn-x p1) (posn-x p2))
+         (equal? (posn-y p1) (posn-y p2)))))
+
 (struct box
   (xmin ;number
    ymin ;number
@@ -245,6 +250,51 @@
                     (size (node-sw v))
                     (size (node-se v)))])))
 
+; a posn and a node or E
+(define lookup
+  (λ (p v)
+    (if (E? v)
+        #f
+        (let* ([x (posn-x p)]
+               [y (posn-y p)]
+               [bounds (node-bounds v)]
+               [xmin (box-xmin bounds)]
+               [ymin (box-ymin bounds)]
+               [xmax (box-xmax bounds)]
+               [ymax (box-ymax bounds)]
+               [xmid (box-xmid bounds)]
+               [ymid (box-ymid bounds)]
+               [nw (node-nw v)]
+               [ne (node-ne v)]
+               [sw (node-sw v)]
+               [se (node-se v)])
+          (cond
+            ;nw
+            [(and (>= x xmin) (< x xmid) (>= y ymin) (< y ymid))
+             (cond
+               [(E? nw) #f]
+               [(posn? nw) (posn-=? nw p)]
+               [(node? nw) (lookup p nw)])]
+            ;ne
+            [(and (>= x xmid) (< x xmax) (>= y ymin) (< y ymid))
+             (cond
+               [(E? ne) #f]
+               [(posn? ne) (posn-=? ne p)]
+               [(node? ne) (lookup p ne)])]
+            ;sw
+            [(and (>= x xmin) (< x xmid) (>= y ymid) (< y ymax))
+             (cond
+               [(E? sw) #f]
+               [(posn? sw) (posn-=? sw p)]
+               [(node? sw) (lookup p sw)])]
+            ;se
+            [(and (>= x xmid) (< x xmax) (>= y ymid) (< y ymax))
+             (cond
+               [(E? se) #f]
+               [(posn? se) (posn-=? se p)]
+               [(node? se) (lookup p se)])]
+            [else #f])))))
+
 (define init
   (node (box 0 0 WIDTH HEIGHT (/ WIDTH 2) (/ HEIGHT 2))
         (E)
@@ -278,11 +328,22 @@
    (size init)
    0)
 
-  (check-equal?
-   (size (insert (posn 3 3)
-                 (insert (posn 4 4)
+  (define node1
+    (insert (posn 3 4)
+                 (insert (posn 4 3)
                          init)))
-   2))
+
+  (check-equal?
+   (size node1)
+   2)
+  (check-true
+   (lookup (posn 3 4) node1))
+  (check-true
+   (lookup (posn 4 3) node1))
+  (check-false
+   (lookup (posn 3 3) node1))
+  (check-false
+   (lookup (posn 4 4) node1)))
 
 
                                                                                               
@@ -427,6 +488,8 @@
 ;                    ;    ;                                                 ;    ; 
 ;                     ;;  ;                                                  ;;  ; 
 ;                       ;;;                                                    ;;; 
-(big-bang init
-          (to-draw draw-world)
-          (on-mouse mouse-controls))
+(define bang
+  (λ ()
+    (big-bang init
+      (to-draw draw-world)
+      (on-mouse mouse-controls))))
