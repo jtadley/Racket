@@ -132,9 +132,9 @@
                (two-posn-node
                 (box xmid ymin xmax ymid (/ (+ xmid xmax) 2) (/ (+ ymin ymid) 2))
                 p1
-                p2
-                (E)
-                (E)))]
+                p2)
+               (E)
+               (E))]
         ; both in sw
         [(and p1-sw p2-sw)
          (node bounds
@@ -152,7 +152,9 @@
                (E)
                (E)
                (two-posn-node
-                (box xmid ymid xmax ymax (/ (+ xmid xmax) 2) (/ (+ ymid ymax) 2))))]
+                (box xmid ymid xmax ymax (/ (+ xmid xmax) 2) (/ (+ ymid ymax) 2))
+                p1
+                p2))]
         [else
          (cond
            [p1-nw
@@ -193,25 +195,41 @@
             [(and (< x xmid) (< y ymid))
              (cond
                [(node? nw) (node bounds (insert p nw) ne sw se)]
-               [(posn? nw) (two-posn-node (box xmin ymin xmid ymid (/ (+ xmin xmid) 2) (/ (+ ymin ymid) 2)) p nw)]
+               [(posn? nw) (node bounds
+                                 (two-posn-node (box xmin ymin xmid ymid (/ (+ xmin xmid) 2) (/ (+ ymin ymid) 2)) p nw)
+                                 ne
+                                 sw
+                                 se)]
                [(E? nw) (node bounds p ne sw se)])]
             ; ne
             [(and (>= x xmid) (< y ymid))
              (cond
                [(node? ne) (node bounds nw (insert p ne) sw se)]
-               [(posn? ne) (two-posn-node p ne)]
+               [(posn? ne) (node bounds
+                                 nw
+                                 (two-posn-node (box xmid ymin xmax ymid (/ (+ xmid xmax) 2) (/ (+ ymin ymid) 2)) p ne)
+                                 sw
+                                 se)]
                [(E? ne) (node bounds nw p sw se)])]
             ; sw
             [(and (< x xmid) (>= y ymid))
              (cond
                [(node? sw) (node bounds nw ne (insert p sw) se)]
-               [(posn? sw) (two-posn-node p sw)]
+               [(posn? sw) (node bounds
+                                 nw
+                                 ne
+                                 (two-posn-node (box xmin ymid xmid ymax (/ (+ xmin xmid) 2) (/ (+ ymid ymax) 2)) p sw)
+                                 se)]
                [(E? sw) (node bounds nw ne p se)])]
             ; se
             [(and (>= x xmid) (>= y ymid))
              (cond
                [(node? se) (node bounds nw ne sw (insert p se))]
-               [(posn? se) (two-posn-node p se)]
+               [(posn? se) (node bounds
+                                 nw
+                                 ne
+                                 sw
+                                 (two-posn-node (box xmid ymid xmax ymax (/ (+ xmid xmax) 2) (/ (+ ymid ymax) 2)) p se))]
                [(E? se) (node bounds nw ne sw p)])]
             ;shouldn't get here
             [else (error "could not find a place in box for posn")])))))
@@ -316,8 +334,8 @@
                                    (box-ymin bounds))
                                 "solid"
                                 (get-color depth))
-                               (box-xmin bounds)
-                               (box-ymin bounds)
+                               (box-xmid bounds)
+                               (box-ymid bounds)
                                scene))
                   (if (node? nw)
                       (helper nw (add1 depth))
@@ -373,3 +391,42 @@
                       (void))))])
       (helper world 0)
       scene)))
+
+                                              
+;       ;;  ;;        ;;;;  ;     ;     ;;;;    ;;;;   
+;     ;; ;  ; ;     ;;    ; ;     ;    ;;      ;;  ;   
+;     ;; ; ;  ;    ;;     ; ;     ;   ;        ;    ;  
+;     ;   ;;  ;   ;;      ; ;     ;   ;       ;    ;;  
+;     ;   ;;  ;   ;       ; ;    ;;    ;;     ;;;;;    
+;     ;   ;   ;   ;       ; ;    ;;      ;;   ;        
+;     ;   ;   ;   ;      ;  ;   ;;;        ;  ;      ; 
+;     ;   ;   ;   ;      ;  ;  ;  ;        ;   ;   ;;  
+;     ;   ;   ;    ;    ;   ;  ;  ;   ;;  ;;    ;;;;   
+;                   ;;;;     ;;   ;    ;;;;            
+(define mouse-controls
+  (λ (world x y mouse_event)
+    (cond
+      [(equal? mouse_event "button-down") (insert (posn x y) world)]
+      [else world])))
+                                                                          
+;   ;                                       ;                                      
+;   ;          ;                            ;                                      
+;   ;                                       ;                                      
+;   ;                                       ;                                      
+;   ;                 ;;;;                  ;                   ;            ;;;;  
+;   ;    ;;;   ;    ;;    ;                 ;    ;;;     ;;;    ;   ;;     ;;    ; 
+;    ;  ;   ;  ;   ;;     ;                  ;  ;   ;  ;;   ;   ;   ; ;   ;;     ; 
+;    ;;;    ;  ;   ;      ;   ;;             ;;;    ;       ;   ;  ;  ;   ;      ; 
+;    ;;     ;  ;  ;      ;;   ;;;;;;;;;;;    ;;     ;       ;   ; ;   ;  ;      ;; 
+;    ;      ;  ;  ;      ;;                  ;      ;    ;; ;    ;;   ;  ;      ;; 
+;    ;     ;   ;  ;     ; ;                  ;     ;   ;;  ;;    ;    ;  ;     ; ; 
+;    ;    ;    ;  ;;   ;  ;                  ;    ;    ;   ;;    ;    ;  ;;   ;  ; 
+;    ;   ;     ;    ;;;   ;                  ;   ;     ;  ; ;    ;    ;    ;;;   ; 
+;     ;;;      ;          ;                   ;;;      ;;;  ;    ;    ;          ; 
+;                    ;    ;                                                 ;    ; 
+;                    ;    ;                                                 ;    ; 
+;                     ;;  ;                                                  ;;  ; 
+;                       ;;;                                                    ;;; 
+(big-bang init
+          (to-draw draw-world)
+          (on-mouse mouse-controls))
