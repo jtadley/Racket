@@ -374,8 +374,8 @@
       [(eqv? depth 4) (color 127 0 255)]
       [(eqv? depth 5) (color 102 0 204)]
       [(eqv? depth 6) (color 76 0 153)]
-      [(eqv? depth 6) (color 51 0 102)]
-      [(eqv? depth 6) (color 25 0 51)])))
+      [(eqv? depth 7) (color 51 0 102)]
+      [else (color 25 0 51)])))
 
 (define draw-world
   (λ (world)
@@ -467,7 +467,9 @@
 (define mouse-controls
   (λ (world x y mouse_event)
     (cond
-      [(equal? mouse_event "button-down") (insert (posn x y) world)]
+      [(equal? mouse_event "button-down") (if (not (lookup (posn x y) world))
+                                              (insert (posn x y) world)
+                                              world)]
       [else world])))
                                                                           
 ;   ;                                       ;                                      
