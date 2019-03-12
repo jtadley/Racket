@@ -66,6 +66,26 @@
                    (node n1-l n1-v merged (add1 merged-rank))
                    (node merged n1-v n1-l (add1 n1-l-rank))))))])))
 
+(define merge2
+  (λ (n1 n2)
+    (cond
+      [(leaf? n1) n2]
+      [(leaf? n2) n1]
+      [else
+       (let ([n1-l (node-left n1)]
+             [n1-v (node-value n1)]
+             [n1-r (node-right n1)]
+             [n2-l (node-left n2)]
+             [n2-v (node-value n2)]
+             [n2-r (node-right n2)])
+         (if (> n1-v n2-v)
+             (if (>= (rank n2-l) (node-rank (merge n2-r n1)))
+                 (node n2-l n2-v (merge n2-r n1) (add1 (node-rank (merge n2-r n1))))
+                 (node (merge n2-r n1) n2-v n2-l (add1 (rank n2-l))))
+             (if (>= (rank n1-l) (node-rank (merge n1-r n2)))
+                 (node n1-l n1-v (merge n1-r n2) (add1 (node-rank (merge n1-r n2))))
+                 (node (merge n1-r n2) n1-v n1-l (add1 (rank n1-l))))))])))
+
 (define singleton
   (λ (v)
     (node (leaf) v (leaf) 1)))
@@ -73,6 +93,10 @@
 (define insert
   (λ (v n)
     (merge (singleton v) n)))
+
+(define insert2
+  (λ (v n)
+    (merge2 (singleton v) n)))
 
 (define min
   (λ (n)
@@ -195,4 +219,60 @@
   (check-true (balanced? heap14))
   (check-true (balanced? heap15))
 |#
+
+  (define heap0^ (leaf))
+  (define heap1^ (singleton 1))
+  (define heap2^ (insert2 2 heap1))
+  (define heap3^ (merge2 heap2 heap2))
+  (define heap4^ (insert2 -1 heap3))
+  (define heap5^ (insert2 5 heap4))
+  (define heap6^ (insert2 -5 heap5))
+  (define heap10^ (singleton 4))
+  (define heap11^ (insert2 3 heap10))
+  (define heap12^ (insert2 -1 heap11))
+  (define heap13^ (insert2 -3 heap12))
+  (define heap14^ (insert2 0 heap13))
+  (define heap15^ (merge2 heap6 heap14))
+
+  (check-equal? (size heap0^) 0)
+  (check-equal? (size heap1^) 1)
+  (check-equal? (size heap2^) 2)
+  (check-equal? (size heap3^) 4)
+  (check-equal? (size heap4^) 5)
+  (check-equal? (size heap5^) 6)
+  (check-equal? (size heap6^) 7)
+  (check-equal? (size heap10^) 1)
+  (check-equal? (size heap11^) 2)
+  (check-equal? (size heap12^) 3)
+  (check-equal? (size heap13^) 4)
+  (check-equal? (size heap14^) 5)
+  (check-equal? (size heap15^) 12)
+  
+  (check-true (heap? heap0^))
+  (check-true (heap? heap1^))
+  (check-true (heap? heap2^))
+  (check-true (heap? heap3^))
+  (check-true (heap? heap4^))
+  (check-true (heap? heap5^))
+  (check-true (heap? heap6^))
+  (check-true (heap? heap10^))
+  (check-true (heap? heap11^))
+  (check-true (heap? heap12^))
+  (check-true (heap? heap13^))
+  (check-true (heap? heap14^))
+  (check-true (heap? heap15^))
+
+  (check-true (leftist? heap0^))
+  (check-true (leftist? heap1^))
+  (check-true (leftist? heap2^))
+  (check-true (leftist? heap3^))
+  (check-true (leftist? heap4^))
+  (check-true (leftist? heap5^))
+  (check-true (leftist? heap6^))
+  (check-true (leftist? heap10^))
+  (check-true (leftist? heap11^))
+  (check-true (leftist? heap12^))
+  (check-true (leftist? heap13^))
+  (check-true (leftist? heap14^))
+  (check-true (leftist? heap15^))
   )
