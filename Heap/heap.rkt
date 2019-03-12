@@ -179,13 +179,13 @@
   (check-true (leftist? heap13))
   (check-true (leftist? heap14))
   (check-true (leftist? heap15))
-
+  
+  #|
   (check-true (balanced? heap0))
   (check-true (balanced? heap1))
   (check-true (balanced? heap2))
   (check-true (balanced? heap3))
   (check-true (balanced? heap4))
-  #|
   (check-true (balanced? heap5))
   (check-true (balanced? heap6))
   (check-true (balanced? heap10))
