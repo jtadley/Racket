@@ -7,6 +7,13 @@
 ; delete-min -> O(logn)
 ; merge -> O(logn)
 
+;merge2 is the same as merge, but might be easier to implement in coq
+
+;abstraction: list
+;insert -> cons
+;getmin -> min
+;merge -> append
+
 (require racket/struct)
 
 (struct leaf
@@ -137,16 +144,20 @@
                  (leftist? l)
                  (leftist? r)))])))
 
-  (define balanced?
+  (define length-to-rightmost-leaf
+    (λ (n)
+      (cond
+        [(leaf? n) 0]
+        [else (add1 (length-to-rightmost-leaf (node-right n)))])))
+
+  (define correct-ranks?
     (λ (n)
       (cond
         [(leaf? n) #t]
-        [else (let ([l (node-left n)]
-                    [r (node-right n)])
-                (and
-                 (<= (abs (- (height l) (height r))) 1)
-                 (balanced? l)
-                 (balanced? r)))])))
+        [else
+         (and (equal? (length-to-rightmost-leaf n) (node-rank n))
+              (correct-ranks? (node-left n))
+              (correct-ranks? (node-right n)))])))
 
   (define heap0 (leaf))
   (define heap1 (singleton 1))
@@ -203,22 +214,20 @@
   (check-true (leftist? heap13))
   (check-true (leftist? heap14))
   (check-true (leftist? heap15))
-  
-  #|
-  (check-true (balanced? heap0))
-  (check-true (balanced? heap1))
-  (check-true (balanced? heap2))
-  (check-true (balanced? heap3))
-  (check-true (balanced? heap4))
-  (check-true (balanced? heap5))
-  (check-true (balanced? heap6))
-  (check-true (balanced? heap10))
-  (check-true (balanced? heap11))
-  (check-true (balanced? heap12))
-  (check-true (balanced? heap13))
-  (check-true (balanced? heap14))
-  (check-true (balanced? heap15))
-|#
+
+  (check-true (correct-ranks? heap0))
+  (check-true (correct-ranks? heap1))
+  (check-true (correct-ranks? heap2))
+  (check-true (correct-ranks? heap3))
+  (check-true (correct-ranks? heap4))
+  (check-true (correct-ranks? heap5))
+  (check-true (correct-ranks? heap6))
+  (check-true (correct-ranks? heap10))
+  (check-true (correct-ranks? heap11))
+  (check-true (correct-ranks? heap12))
+  (check-true (correct-ranks? heap13))
+  (check-true (correct-ranks? heap14))
+  (check-true (correct-ranks? heap15))
 
   (define heap0^ (leaf))
   (define heap1^ (singleton 1))
@@ -275,4 +284,68 @@
   (check-true (leftist? heap13^))
   (check-true (leftist? heap14^))
   (check-true (leftist? heap15^))
+
+  (check-true (correct-ranks? heap0^))
+  (check-true (correct-ranks? heap1^))
+  (check-true (correct-ranks? heap2^))
+  (check-true (correct-ranks? heap3^))
+  (check-true (correct-ranks? heap4^))
+  (check-true (correct-ranks? heap5^))
+  (check-true (correct-ranks? heap6^))
+  (check-true (correct-ranks? heap10^))
+  (check-true (correct-ranks? heap11^))
+  (check-true (correct-ranks? heap12^))
+  (check-true (correct-ranks? heap13^))
+  (check-true (correct-ranks? heap14^))
+  (check-true (correct-ranks? heap15^))
+
+  (define heap20 (singleton 0))
+  (define heap21 (insert2 0 heap20))
+  (define heap22 (insert2 0 heap21))
+  (define heap23 (insert2 0 heap22))
+  (define heap24 (merge2 heap23 heap23))
+  (define heap25 (merge2 heap24 heap24))
+  (define heap26 (insert2 0 heap25))
+  (define heap27 (insert2 0 heap26))
+  (define heap28 (insert2 0 heap27))
+
+  (check-equal? (size heap20) 1)
+  (check-equal? (size heap21) 2)
+  (check-equal? (size heap22) 3)
+  (check-equal? (size heap23) 4)
+  (check-equal? (size heap24) 8)
+  (check-equal? (size heap25) 16)
+  (check-equal? (size heap26) 17)
+  (check-equal? (size heap27) 18)
+  (check-equal? (size heap28) 19)
+
+  (check-true (heap? heap20))
+  (check-true (heap? heap21))
+  (check-true (heap? heap22))
+  (check-true (heap? heap23))
+  (check-true (heap? heap24))
+  (check-true (heap? heap25))
+  (check-true (heap? heap26))
+  (check-true (heap? heap27))
+  (check-true (heap? heap28))
+
+  (check-true (leftist? heap20))
+  (check-true (leftist? heap21))
+  (check-true (leftist? heap22))
+  (check-true (leftist? heap23))
+  (check-true (leftist? heap24))
+  (check-true (leftist? heap25))
+  (check-true (leftist? heap26))
+  (check-true (leftist? heap27))
+  (check-true (leftist? heap28))
+
+  (check-true (correct-ranks? heap20))
+  (check-true (correct-ranks? heap21))
+  (check-true (correct-ranks? heap22))
+  (check-true (correct-ranks? heap23))
+  (check-true (correct-ranks? heap24))
+  (check-true (correct-ranks? heap25))
+  (check-true (correct-ranks? heap26))
+  (check-true (correct-ranks? heap27))
+  (check-true (correct-ranks? heap28))
   )
