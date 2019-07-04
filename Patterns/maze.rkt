@@ -8,7 +8,7 @@
 (define SIZE 20)
 (define OFFSET (* 10 SIZE))
 (define BG_COLOR "black")
-(define PEN (make-pen "maroon" (/ SIZE 5) "solid" "round" "miter"))
+(define PEN (make-pen "cyan" (/ SIZE 5) "solid" "round" "miter"))
 
 (define tmp (scene+polygon
              (empty-scene WIDTH HEIGHT)

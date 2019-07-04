@@ -6,7 +6,7 @@
 (define HEIGHT 800)
 (define X_INCR 20)
 (define Y_INCR (* X_INCR (/ 3 4)))
-(define LINE_COLOR "maroon")
+(define PEN (make-pen "cyan" 2 "solid" "projecting" "bevel"))
 (define BG_COLOR "black")
 
 (define draw_intersection
@@ -21,27 +21,27 @@
          y
          (+ x X_INCR)
          (- y Y_INCR)
-         LINE_COLOR)
+         PEN)
         x
         y
         (+ x X_INCR)
         (+ y Y_INCR)
-        LINE_COLOR)
+        PEN)
        x
        y
        (- x X_INCR)
        (- y Y_INCR)
-       LINE_COLOR)
+       PEN)
       x
       y
       (- x X_INCR)
       (+ y Y_INCR)
-      LINE_COLOR)
+      PEN)
      x
      (- y Y_INCR)
      x
      (+ y Y_INCR)
-     LINE_COLOR)))
+     PEN)))
 
 (define draw_squares
   (λ (x y)
