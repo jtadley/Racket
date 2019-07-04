@@ -48,7 +48,7 @@
     (cond
       [(>= y HEIGHT) (rectangle (- WIDTH X_INCR) (- HEIGHT Y_INCR) "solid" BG_COLOR)]
       [(>= x WIDTH) (draw_squares 0 (add1 y))]
-      [(and (eqv? (modulo x (* 2 X_INCR)) 0)
+      [(and (zero? (modulo x (* 2 X_INCR)))
             (eqv? (modulo y (* 4 Y_INCR)) Y_INCR))
        (draw_intersection x y)]
       [(and (eqv? (modulo x (* 2 X_INCR)) X_INCR)
