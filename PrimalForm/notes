@@ -1,5 +1,0 @@
-v5 doesn't work because:
-	some numbers have (1 . 1), while others do not but are still non-zero
-	sol'ns:
-		use zero again
-		rewrite all functions
