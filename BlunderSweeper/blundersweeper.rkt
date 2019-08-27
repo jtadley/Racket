@@ -14,6 +14,7 @@
 (define PEN (make-pen "black" 2 "solid" "round" "miter"))
 (define POLYGON_BG_COLOR "white")
 (define POLYGON_LINE_COLOR "black")
+(define MINE_PROBABILITY .25)
 
 (define isTwoPlus3k?
   (λ (n)
@@ -21,12 +22,14 @@
           2)))
 
 (struct posn (x y))
+
 ;; state is one of: "active", "dormant", "flagged"
 ;; type is one of: "square", "hexagon", "octagon"
-(struct block (x y type state neighbour_posns))
+(struct block (x y type state mine? neighbour_posns))
+
 (define block-init
   (λ (x y type)
-    (block x y type "dormant"
+    (block x y type "dormant" (< (random) MINE_PROBABILITY)
            (match type
              ["square" (list (posn (- x (* (/ LINE_LENGTH 2) 3))
                                    (- y (/ LINE_LENGTH 2))) ;; left-octagon
@@ -97,54 +100,78 @@
                [lop (match (block-type b)
                       ["square"
                        (list 
-                           (make-posn x
-                                      y)
-                           (make-posn x
-                                      (+ y LINE_LENGTH))
-                           (make-posn (+ x LINE_LENGTH)
-                                      (+ y LINE_LENGTH))
-                           (make-posn (+ x LINE_LENGTH)
-                                      y))]
+                        (make-posn x
+                                   y)
+                        (make-posn x
+                                   (+ y LINE_LENGTH))
+                        (make-posn (+ x LINE_LENGTH)
+                                   (+ y LINE_LENGTH))
+                        (make-posn (+ x LINE_LENGTH)
+                                   y))]
                       ["hexagon"
                        (list
-                         (make-posn x
-                                    y)
-                         (make-posn (+ x LINE_LENGTH)
-                                    y)
-                         (make-posn (+ x (* (/ LINE_LENGTH 2) 3))
-                                    (+ y (/ LINE_LENGTH 2)))
-                         (make-posn (+ x LINE_LENGTH)
-                                    (+ y LINE_LENGTH))
-                         (make-posn x
-                                    (+ y LINE_LENGTH))
-                         (make-posn (- x (/ LINE_LENGTH 2))
-                                    (+ y (/ LINE_LENGTH 2))))]
+                        (make-posn x
+                                   y)
+                        (make-posn (+ x LINE_LENGTH)
+                                   y)
+                        (make-posn (+ x (* (/ LINE_LENGTH 2) 3))
+                                   (+ y (/ LINE_LENGTH 2)))
+                        (make-posn (+ x LINE_LENGTH)
+                                   (+ y LINE_LENGTH))
+                        (make-posn x
+                                   (+ y LINE_LENGTH))
+                        (make-posn (- x (/ LINE_LENGTH 2))
+                                   (+ y (/ LINE_LENGTH 2))))]
                       ["octagon"
                        (list
-                         (make-posn x
-                                    y)
-                         (make-posn (+ x LINE_LENGTH)
-                                    y)
-                         (make-posn (+ x (* (/ LINE_LENGTH 2) 3))
-                                    (+ y (/ LINE_LENGTH 2)))
-                         (make-posn (+ x (* (/ LINE_LENGTH 2) 3))
-                                    (+ y (* (/ LINE_LENGTH 2) 3)))
-                         (make-posn (+ x LINE_LENGTH)
-                                    (+ y (* 2 LINE_LENGTH)))
-                         (make-posn x
-                                    (+ y (* 2 LINE_LENGTH)))
-                         (make-posn (- x (/ LINE_LENGTH 2))
-                                    (+ y (* (/ LINE_LENGTH 2) 3)))
-                         (make-posn (- x (/ LINE_LENGTH 2))
-                                    (+ y (/ LINE_LENGTH 2))))])])
+                        (make-posn x
+                                   y)
+                        (make-posn (+ x LINE_LENGTH)
+                                   y)
+                        (make-posn (+ x (* (/ LINE_LENGTH 2) 3))
+                                   (+ y (/ LINE_LENGTH 2)))
+                        (make-posn (+ x (* (/ LINE_LENGTH 2) 3))
+                                   (+ y (* (/ LINE_LENGTH 2) 3)))
+                        (make-posn (+ x LINE_LENGTH)
+                                   (+ y (* 2 LINE_LENGTH)))
+                        (make-posn x
+                                   (+ y (* 2 LINE_LENGTH)))
+                        (make-posn (- x (/ LINE_LENGTH 2))
+                                   (+ y (* (/ LINE_LENGTH 2) 3)))
+                        (make-posn (- x (/ LINE_LENGTH 2))
+                                   (+ y (/ LINE_LENGTH 2))))])])
           (scene+polygon
-            (scene+polygon
-              (draw-world (cdr lob))
-              lop
-              "solid"
-              POLYGON_BG_COLOR)
+           (scene+polygon
+            (draw-world (cdr lob))
             lop
-            "outline"
-            POLYGON_LINE_COLOR)))))
+            "solid"
+            POLYGON_BG_COLOR)
+           lop
+           "outline"
+           POLYGON_LINE_COLOR)))))
+
+(define get-block
+  (λ (x y world)
+    (cond
+      [(null? world) (error 'block-not-found)]
+      [(and
+        (eqv? x (block-x (car world)))
+        (eqv? y (block-y (car world))))
+       (car world)]
+      [else (get-block x y (cdr world))])))
+
+(define get-block-number
+  (λ (b world)
+    (letrec ([helper
+              (λ (lop)
+                (cond
+                  [(null? lop) 0]
+                  [else (let* ([p (car lop)]
+                               [x (posn-x p)]
+                               [y (posn-y p)]
+                               [b (get-block x y world)]
+                               [b-value (if (block-mine? b) 1 0)])
+                          (+ b-value (helper (cdr lop))))]))])
+      (helper (block-neighbour_posns b)))))
 
 (draw-world init)
