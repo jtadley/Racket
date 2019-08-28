@@ -131,11 +131,11 @@
   (λ (x y)
     (cond
       [(>= y (- SCREEN_HEIGHT LINE_LENGTH)) '()]
-      [(>= x SCREEN_WIDTH) (gen-init 0 (+ y (* 2 LINE_LENGTH)))]
-      ;; add a box and a hexagon
+      [(>= x SCREEN_WIDTH) (gen-init 0 (+ y LEN-2))]
+      ;; add a box and a (maybe) hexagon
       [(isTwoPlus3k? x)
        (cons (block-init x (+ y LEN-1/2) SQUARE)
-             (if (<= (+ y LINE_LENGTH) SCREEN_HEIGHT)
+             (if (< y (- SCREEN_HEIGHT LEN-2))
                  (cons (block-init x (+ y LEN-3/2) HEXAGON)
                        (gen-init (+ x LINE_LENGTH) y))
                  (gen-init (+ x LINE_LENGTH) y)))]
@@ -243,7 +243,17 @@
 
 (define xy-in-block?
   (λ (x y b)
-    #t))
+    (let ([b-x (block-x b)]
+          [b-y (block-y b)])
+        (match (block-type b)
+          [SQUARE
+           (and
+            (> x b-x)
+            (< x (+ b-x LINE_LENGTH))
+            (> y b-y)
+            (< y (+ b-y LINE_LENGTH)))]
+          [HEXAGON #f]
+          [OCTAGON #f]))))
 
 (define activate-block
   (λ (x y world)
@@ -260,6 +270,7 @@
   (λ (world x y mouse-event)
     (cond
       [(eqv? mouse-event "button-down")
+       (printf mouse-event)
        (activate-all world)
        #;
        (activate-block x y world)]
