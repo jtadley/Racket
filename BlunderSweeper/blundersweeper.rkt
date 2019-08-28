@@ -33,6 +33,12 @@
       (λ (p) 'posn)
       (λ (p) (list (posn-x p) (posn-y p)))))])
 
+(define ACTIVE "active")
+(define DORMANT "dormant")
+(define FLAGGED "flagged")
+(define SQUARE "square")
+(define HEXAGON "hexagon")
+(define OCTAGON "octagon")
 ;; state is one of: "active", "dormant", "flagged"
 ;; type is one of: "square", "hexagon", "octagon"
 (struct block
@@ -54,10 +60,31 @@
               (block-mine? b)
               (block-neighbour_posns b)))))])
 
+(define edit-number
+  (λ (b world)
+    (block
+     (block-x b)
+     (block-y b)
+     (block-type b)
+     (block-state b)
+     (block-mine? b)
+     (get-block-number b world)
+     (block-neighbour_posns b))))
+
+(define edit-state
+  (λ (b state)
+    (block
+     (block-x b)
+     (block-y b)
+     (block-type b)
+     state
+     (block-mine? b)
+     (block-number b)
+     (block-neighbour_posns b))))
 
 (define block-init
   (λ (x y type)
-    (block x y type "dormant" (< (random) MINE_PROBABILITY) 0
+    (block x y type DORMANT (< (random) MINE_PROBABILITY) 0
            (match type
              ["square" (list (posn (- x LEN-3/2)
                                    (- y LEN-1/2)) ;; left-octagon
@@ -107,13 +134,13 @@
       [(>= x SCREEN_WIDTH) (gen-init 0 (+ y (* 2 LINE_LENGTH)))]
       ;; add a box and a hexagon
       [(isTwoPlus3k? x)
-       (cons (block-init x (+ y LEN-1/2) "square")
+       (cons (block-init x (+ y LEN-1/2) SQUARE)
              (if (<= (+ y LINE_LENGTH) SCREEN_HEIGHT)
-                 (cons (block-init x (+ y LEN-3/2) "hexagon")
+                 (cons (block-init x (+ y LEN-3/2) HEXAGON)
                        (gen-init (+ x LINE_LENGTH) y))
                  (gen-init (+ x LINE_LENGTH) y)))]
       ;; add an octagon
-      [else (cons (block-init (+ x LEN-1/2) y "octagon")
+      [else (cons (block-init (+ x LEN-1/2) y OCTAGON)
                   (gen-init (+ x LEN-2) y))])))
 
 (define draw-world
@@ -167,9 +194,10 @@
                         (make-posn (- x (/ LINE_LENGTH 2))
                                    (+ y (/ LINE_LENGTH 2))))])])
           (place-image
-           (if (block-mine? b)
-               (text "💣" (/ LINE_LENGTH 2) "black")
-               (text (number->string (block-number b)) (/ LINE_LENGTH 2) "maroon"))
+           (cond
+             [(eqv? (block-state b) DORMANT) (text "" 1 "black")]
+             [(block-mine? b) (text "💣" (/ LINE_LENGTH 2) "black")]
+             [else (text (number->string (block-number b)) (/ LINE_LENGTH 2) "maroon")])
            (+ x (/ LINE_LENGTH 2))
            (+ y (/ LINE_LENGTH 2))
            (scene+polygon
@@ -206,23 +234,36 @@
                           (+ b-value (helper (cdr lop))))]))])
       (helper (block-neighbour_posns b)))))
 
+(define activate-all
+  (λ (world)
+    (cond
+      [(null? world) '()]
+      [else (cons (edit-state (car world) ACTIVE)
+                  (activate-all (cdr world)))])))
+
+(define xy-in-block?
+  (λ (x y b)
+    #t))
+
+(define activate-block
+  (λ (x y world)
+    (cond
+      [(null? world) '()]
+      [(xy-in-block? x y (car world))
+       (cons
+        (edit-state (car world) ACTIVE)
+        (cdr world))]
+      [else (cons (car world)
+                  (activate-block x y (cdr world)))])))
+
 (define mouse-controls
   (λ (world x y mouse-event)
     (cond
-      [(eqv? mouse-event "left-down") (begin (println "~~left-down~~") world)]
-      [(eqv? mouse-event "right-down") (begin (println "~~right-down~~") world)]
-      [else (begin (println mouse-event) world)])))
-
-(define edit-number
-  (λ (b world)
-    (block
-     (block-x b)
-     (block-y b)
-     (block-type b)
-     (block-state b)
-     (block-mine? b)
-     (get-block-number b world)
-     (block-neighbour_posns b))))
+      [(eqv? mouse-event "button-down")
+       (activate-all world)
+       #;
+       (activate-block x y world)]
+      [else world])))
 
 (define fill-numbers
   (λ (lob world)
