@@ -41,6 +41,7 @@
    type
    state
    mine?
+   number
    neighbour_posns)
   #:methods gen:custom-write
   [(define write-proc
@@ -56,7 +57,7 @@
 
 (define block-init
   (λ (x y type)
-    (block x y type "dormant" (< (random) MINE_PROBABILITY)
+    (block x y type "dormant" (< (random) MINE_PROBABILITY) 0
            (match type
              ["square" (list (posn (- x LEN-3/2)
                                    (- y LEN-1/2)) ;; left-octagon
@@ -115,8 +116,6 @@
       [else (cons (block-init (+ x LEN-1/2) y "octagon")
                   (gen-init (+ x LEN-2) y))])))
 
-(define init (gen-init 0 0))
-
 (define draw-world
   (λ (lob)
     (if (null? lob)
@@ -170,7 +169,7 @@
           (place-image
            (if (block-mine? b)
                (text "💣" (/ LINE_LENGTH 2) "black")
-               (text (number->string (get-block-number b init)) (/ LINE_LENGTH 2) "maroon"))
+               (text (number->string (block-number b)) (/ LINE_LENGTH 2) "maroon"))
            (+ x (/ LINE_LENGTH 2))
            (+ y (/ LINE_LENGTH 2))
            (scene+polygon
@@ -213,6 +212,28 @@
       [(eqv? mouse-event "left-down") (begin (println "~~left-down~~") world)]
       [(eqv? mouse-event "right-down") (begin (println "~~right-down~~") world)]
       [else (begin (println mouse-event) world)])))
+
+(define edit-number
+  (λ (b world)
+    (block
+     (block-x b)
+     (block-y b)
+     (block-type b)
+     (block-state b)
+     (block-mine? b)
+     (get-block-number b world)
+     (block-neighbour_posns b))))
+
+(define fill-numbers
+  (λ (lob world)
+    (cond
+      [(null? lob) '()]
+      [else (cons (edit-number (car lob) world)
+                  (fill-numbers (cdr lob) world))])))
+
+(define init
+  (let ([init-no-numbers (gen-init 0 0)])
+    (fill-numbers init-no-numbers init-no-numbers)))
 
 
 (big-bang init
