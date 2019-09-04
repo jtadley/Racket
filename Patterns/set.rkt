@@ -4,6 +4,212 @@
          lang/posn
          racket/struct)
 
+
+(define CARD-COLOR (make-color 255 245 238))
+
+                                                                                             
+;                                                                                                  
+;                                                                                                  
+;     ;;;;          ;;;;             ;;;;              ;;;;;;;;;;;;;;;;;        ;;;;;;;;;;;;;;;;   
+;     ;;;;          ;;;;             ;;;;              ;;;;;;;;;;;;;;;;;        ;;;;;;;;;;;;;;;;   
+;     ;;;;;        ;;;;;            ;;;;;;             ;;;;;;;;;;;;;;;;;        ;;;;;;;;;;;;;;;;   
+;     ;;;;;        ;;;;;            ;;;;;;                          ;;;         ;;;                
+;     ;;;;;        ;;;;;            ;; ;;;                         ;;;;         ;;;                
+;     ;;;;;;      ;;;;;;           ;;;  ;;;                       ;;;;          ;;;                
+;     ;;;;;;      ;;;;;;           ;;;  ;;;                       ;;;           ;;;                
+;     ;;; ;;     ;;; ;;;           ;;   ;;;                      ;;;;           ;;;                
+;     ;;; ;;;    ;;; ;;;          ;;;    ;;;                    ;;;;            ;;;                
+;     ;;; ;;;    ;;; ;;;          ;;;    ;;;                    ;;;             ;;;                
+;     ;;;  ;;   ;;;  ;;;          ;;;    ;;;                   ;;;              ;;;                
+;     ;;;  ;;;  ;;;  ;;;         ;;;      ;;;                 ;;;;              ;;;;;;;;;;;;;;     
+;     ;;;  ;;;  ;;;  ;;;         ;;;      ;;;                 ;;;               ;;;;;;;;;;;;;;     
+;     ;;;   ;;  ;;   ;;;         ;;;      ;;;                ;;;                ;;;;;;;;;;;;;;     
+;     ;;;   ;;;;;;   ;;;        ;;;        ;;;              ;;;;                ;;;                
+;     ;;;   ;;;;;    ;;;        ;;;;;;;;;;;;;;             ;;;;                 ;;;                
+;     ;;;    ;;;;    ;;;       ;;;;;;;;;;;;;;;             ;;;                  ;;;                
+;     ;;;    ;;;;    ;;;       ;;;;;;;;;;;;;;;;           ;;;;                  ;;;                
+;     ;;;     ;;     ;;;       ;;;          ;;;          ;;;;                   ;;;                
+;     ;;;            ;;;      ;;;;          ;;;;         ;;;                    ;;;                
+;     ;;;            ;;;      ;;;           ;;;;        ;;;;                    ;;;                
+;     ;;;            ;;;      ;;;            ;;;       ;;;;                     ;;;                
+;     ;;;            ;;;     ;;;;            ;;;;      ;;;                      ;;;                
+;     ;;;            ;;;     ;;;             ;;;;     ;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;   
+;     ;;;            ;;;     ;;;              ;;;     ;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;   
+;     ;;;            ;;;    ;;;;              ;;;;    ;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;   
+;                                                                                                  
+(define MAZE-WIDTH 800)
+(define MAZE-HEIGHT 800)
+(define MAZE-SIZE 5)
+(define MAZE-OFFSET (* 10 MAZE-SIZE))
+(define BG_COLOR CARD-COLOR)
+(define PEN (make-pen "cyan" (/ MAZE-SIZE 5) "solid" "round" "miter"))
+
+(define tmp (scene+polygon
+             (empty-scene MAZE-WIDTH MAZE-HEIGHT)
+             (list (make-posn 49 49)
+                   (make-posn (+ 49 2 (* 10 MAZE-SIZE)) 49)
+                   (make-posn (+ 49 2 (* 10 MAZE-SIZE)) (+ 49 2 (* 10 MAZE-SIZE)))
+                   (make-posn 49 (+ 49 2 (* 10 MAZE-SIZE))))
+             "outline"
+             "red"))
+(define tmp_vert
+  (λ ()
+    (draw_block_vertical 50 50 tmp)))
+(define tmp_horz
+  (λ ()
+    (draw_block_horizontal 50 50 tmp)))
+
+(define draw_block_vertical
+  (λ (x y img)
+    (scene+line ; bottom-right vertical bar
+     (scene+line ; bottom-left vertical bar
+      (scene+line ; top-right vertical bar
+       (scene+line ; top-left vertical bar
+        (scene+line ; middle vertical bar
+         (scene+line ; horizontal bottom bar
+          (scene+line ; horizontal top bar
+           img
+           x
+           y
+           (+ x (* 6 MAZE-SIZE))
+           y
+           PEN)
+          x
+          (+ y (* 8 MAZE-SIZE))
+          (+ x (* 6 MAZE-SIZE))
+          (+ y (* 8 MAZE-SIZE))
+          PEN)
+         (+ x (* 3 MAZE-SIZE))
+         y
+         (+ x (* 3 MAZE-SIZE))
+         (+ y (* 8 MAZE-SIZE))
+         PEN)
+        (+ x MAZE-SIZE)
+        y
+        (+ x MAZE-SIZE)
+        (+ y MAZE-SIZE)
+        PEN)
+       (+ x (* 5 MAZE-SIZE))
+       y
+       (+ x (* 5 MAZE-SIZE))
+       (+ y MAZE-SIZE)
+       PEN)
+      (+ x MAZE-SIZE)
+      (+ y (* 7 MAZE-SIZE))
+      (+ x MAZE-SIZE)
+      (+ y (* 8 MAZE-SIZE))
+      PEN)
+     (+ x (* 5 MAZE-SIZE))
+     (+ y (* 7 MAZE-SIZE))
+     (+ x (* 5 MAZE-SIZE))
+     (+ y (* 8 MAZE-SIZE))
+     PEN)))
+
+(define draw_block_horizontal
+  (λ (x y img)
+    (scene+line
+     (scene+line
+      (scene+line
+       (scene+line
+        (scene+line ; middle horizontal bar
+         (scene+line ; vertical right bar
+          (scene+line ; verical left bar
+           img
+           y
+           x
+           y
+           (+ x (* 6 MAZE-SIZE))
+           PEN)
+          (+ y (* 8 MAZE-SIZE))
+          x
+          (+ y (* 8 MAZE-SIZE))
+          (+ x (* 6 MAZE-SIZE))
+          PEN)
+         y
+         (+ x (* 3 MAZE-SIZE))
+         (+ y (* 8 MAZE-SIZE))
+         (+ x (* 3 MAZE-SIZE))
+         PEN)
+        y
+        (+ x MAZE-SIZE)
+        (+ y MAZE-SIZE)
+        (+ x MAZE-SIZE)
+        PEN)
+       y
+       (+ x (* 5 MAZE-SIZE))
+       (+ y MAZE-SIZE)
+       (+ x (* 5 MAZE-SIZE))
+       PEN)
+      (+ y (* 7 MAZE-SIZE))
+      (+ x MAZE-SIZE)
+      (+ y (* 8 MAZE-SIZE))
+      (+ x MAZE-SIZE)
+      PEN)
+     (+ y (* 7 MAZE-SIZE))
+     (+ x (* 5 MAZE-SIZE))
+     (+ y (* 8 MAZE-SIZE))
+     (+ x (* 5 MAZE-SIZE))
+     PEN)))
+
+(define draw_maze
+  (λ (x y)
+    (cond
+      [(>= y (+ MAZE-HEIGHT MAZE-OFFSET))
+       (rectangle MAZE-WIDTH MAZE-HEIGHT "solid" BG_COLOR)]
+      [(>= x (+ MAZE-WIDTH MAZE-OFFSET))
+       (draw_maze (- 0 MAZE-OFFSET) (add1 y))]
+      [(or
+        (and
+         (zero? (modulo x (* 10 MAZE-SIZE)))
+         (zero? (modulo y (* 10 MAZE-SIZE))))
+        (and
+         (eqv? (modulo x (* 10 MAZE-SIZE)) (* 5 MAZE-SIZE))
+         (eqv? (modulo y (* 10 MAZE-SIZE)) (* 5 MAZE-SIZE))))
+       (draw_block_vertical x y (draw_maze (add1 x) y))]
+      [(or
+        (and
+         (eqv? (modulo x (* 10 MAZE-SIZE)) (* 4 MAZE-SIZE))
+         (eqv? (modulo y (* 10 MAZE-SIZE)) MAZE-SIZE))
+        (and
+         (eqv? (modulo x (* 10 MAZE-SIZE)) (* 9 MAZE-SIZE))
+         (eqv? (modulo y (* 10 MAZE-SIZE)) (* 6 MAZE-SIZE))))
+       (draw_block_horizontal y x (draw_maze (add1 x) y))]
+      [else (draw_maze (add1 x) y)])))
+
+;(draw_maze (- 0 MAZE-OFFSET) (- 0 MAZE-OFFSET))
+
+
+
+;                                                                                                                              
+;           ;;;;;;;             ;;;;;;;;;;;;;;;;     ;;;;;;;;;;;;;;;;;;;;  
+;         ;;;;;;;;;;;           ;;;;;;;;;;;;;;;;     ;;;;;;;;;;;;;;;;;;;;  
+;        ;;;;;;;;;;;;;;         ;;;;;;;;;;;;;;;;     ;;;;;;;;;;;;;;;;;;;;  
+;       ;;;;       ;;;;         ;;;                          ;;;;          
+;      ;;;;          ;;         ;;;                          ;;;;          
+;      ;;;                      ;;;                          ;;;;          
+;      ;;;                      ;;;                          ;;;;          
+;      ;;;                      ;;;                          ;;;;          
+;      ;;;;                     ;;;                          ;;;;          
+;       ;;;;                    ;;;                          ;;;;          
+;       ;;;;;;;                 ;;;                          ;;;;          
+;        ;;;;;;;;               ;;;;;;;;;;;;;;               ;;;;          
+;          ;;;;;;;;             ;;;;;;;;;;;;;;               ;;;;          
+;            ;;;;;;;;           ;;;;;;;;;;;;;;               ;;;;          
+;               ;;;;;;;         ;;;                          ;;;;          
+;                 ;;;;;;        ;;;                          ;;;;          
+;                   ;;;;        ;;;                          ;;;;          
+;                    ;;;        ;;;                          ;;;;          
+;                    ;;;        ;;;                          ;;;;          
+;                    ;;;        ;;;                          ;;;;          
+;      ;             ;;;        ;;;                          ;;;;          
+;     ;;;;          ;;;;        ;;;                          ;;;;          
+;     ;;;;;;       ;;;;         ;;;                          ;;;;          
+;      ;;;;;;;;;;;;;;;          ;;;;;;;;;;;;;;;;             ;;;;          
+;        ;;;;;;;;;;;;           ;;;;;;;;;;;;;;;;             ;;;;          
+;           ;;;;;;;             ;;;;;;;;;;;;;;;;             ;;;;          
+;                                                                                                                                          
+
+
 (define FRAME-HEIGHT 1000)
 (define FRAME-WIDTH 1000)
 (define FRAME-COLOR (make-color 255 255 255))
@@ -11,7 +217,6 @@
 (define GAP 40)
 (define CARD-HEIGHT 200)
 (define CARD-WIDTH 280)
-(define CARD-COLOR (make-color 255 245 238))
 
 (define OVAL "oval")
 (define DIAMOND "diamond")
@@ -29,10 +234,16 @@
 (define PEN-SIZE 3)
 (define PURPLE-COLOR (make-color 139 0 139))
 (define PURPLE-PEN (make-pen PURPLE-COLOR PEN-SIZE "solid" "round" "miter"))
+(set! PEN PURPLE-PEN)
+(define PURPLE-MAZE (draw_maze (- 0 MAZE-OFFSET) (- 0 MAZE-OFFSET)))
 (define RED-COLOR (make-color 139 0 0))
 (define RED-PEN (make-pen RED-COLOR PEN-SIZE "solid" "round" "miter"))
+(set! PEN RED-PEN)
+(define RED-MAZE (draw_maze (- 0 MAZE-OFFSET) (- 0 MAZE-OFFSET)))
 (define GREEN-COLOR (make-color 46 139 87))
 (define GREEN-PEN (make-pen GREEN-COLOR PEN-SIZE "solid" "round" "miter"))
+(set! PEN GREEN-PEN)
+(define GREEN-MAZE (draw_maze (- 0 MAZE-OFFSET) (- 0 MAZE-OFFSET)))
 
 (define DIAMOND-SIZE-LEN (/ CARD-HEIGHT 3))
 
@@ -291,4 +502,3 @@
                       (draw-world (cdr loc)))])))
 
 (draw-world loc)
-
