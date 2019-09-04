@@ -456,25 +456,62 @@
       ["green" GREEN-MAZE]
       ["purple" PURPLE-MAZE])))
 
+(define add0.5
+  (λ (x) (+ x 0.5)))
+
+(define add2
+  (λ (x) (add1 (add1 x))))
+
+(define trim-diamond
+  (λ (width height scene)
+    (let* ([pen-size/2 (add0.5 (/ PEN-SIZE 2))]
+           [width/2 (/ width 2)]
+           [height/2 (/ height 2)]
+           [top-left-cleared
+            (add-polygon ;top-left
+             scene
+             (list (make-posn -1 -1)
+                   (make-posn -0.5 (- height/2 pen-size/2))
+                   (make-posn (- width/2 pen-size/2) -0.5))
+             SOLID
+             CARD-COLOR)]
+           [top-cleared
+            (add-polygon
+             top-left-cleared
+             (list (make-posn (add2 width) -1)
+                   (make-posn (+ width/2 pen-size/2) -0.5)
+                   (make-posn (add2 width) (- height/2 pen-size/2)))
+             SOLID
+             CARD-COLOR)]
+           [all-cleared top-cleared])
+      all-cleared)))
+
 (define draw-diamond
   (λ (c x y fill scene)
     (let* ([pen/color (get-card-pen/color c)])
       (match fill
         ["pattern" (let* ([r (rhombus DIAMOND-SIZE-LEN 45 OUTLINE pen/color)]
-                          [r-width/2 (/ (image-width r) 2)]
-                          [r-height/2 (/ (image-height r) 2)])
-                     (place-image (place-image
-                                   r
-                                   r-width/2
-                                   r-height/2
-                                   (place-image
-                                    (get-card-maze c)
-                                    r-width/2
-                                    r-height/2
-                                    r))
-                                  x
-                                  y
-                                  scene))]
+                          [r-width (image-width r)]
+                          [r-height (image-height r)]
+                          [r-width/2 (/ r-width 2)]
+                          [r-height/2 (/ r-height 2)]
+                          [diamond (trim-diamond
+                                    r-width
+                                    r-height
+                                    (place-image
+                                     r
+                                     r-width/2
+                                     r-height/2
+                                     (place-image
+                                      (get-card-maze c)
+                                      r-width/2
+                                      r-height/2
+                                      r)))])
+                     (place-image
+                      diamond
+                      x
+                      y
+                      scene))]
         [_ (place-image
             (rhombus DIAMOND-SIZE-LEN 45 fill pen/color)
             x
@@ -499,13 +536,13 @@
       (match (list c-shape c-number)
         ['("diamond" 1) (draw-diamond c x y c-fill empty-card)]
         ['("diamond" 2) (draw-diamond
-                                 c (+ x (/ DIAMOND-SIZE-LEN 2)) y c-fill
-                                 (draw-diamond c (- x (/ DIAMOND-SIZE-LEN 2)) y c-fill empty-card))]
+                         c (+ x (/ DIAMOND-SIZE-LEN 2)) y c-fill
+                         (draw-diamond c (- x (/ DIAMOND-SIZE-LEN 2)) y c-fill empty-card))]
         ['("diamond" 3) (draw-diamond
-                                 c (+ x DIAMOND-SIZE-LEN) y c-fill
-                                 (draw-diamond
-                                  c x y c-fill
-                                  (draw-diamond c (- x DIAMOND-SIZE-LEN) y c-fill empty-card)))]
+                         c (+ x DIAMOND-SIZE-LEN) y c-fill
+                         (draw-diamond
+                          c x y c-fill
+                          (draw-diamond c (- x DIAMOND-SIZE-LEN) y c-fill empty-card)))]
         ['("oval" 1) empty-card]
         ['("oval" 2) empty-card]
         ['("oval" 3) empty-card]
