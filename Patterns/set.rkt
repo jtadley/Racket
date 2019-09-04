@@ -4,6 +4,15 @@
          lang/posn
          racket/struct)
 
+(define FRAME-HEIGHT 1000)
+(define FRAME-WIDTH 1000)
+(define FRAME-COLOR (make-color 255 255 255))
+(define FRAME (empty-scene FRAME-WIDTH FRAME-HEIGHT FRAME-COLOR))
+(define GAP 40)
+(define CARD-HEIGHT 200)
+(define CARD-WIDTH 280)
+(define CARD-COLOR (make-color 255 245 238))
+
 (define OVAL "oval")
 (define DIAMOND "diamond")
 (define SQUIGGLE "squiggle")
@@ -140,19 +149,19 @@
         PATTERN
         PURPLE))
 (define c2
-  (card (make-posn 0 1)
+  (card (make-posn 1 0)
         SQUIGGLE
         THREE
         PATTERN
         PURPLE))
 (define c3
-  (card (make-posn 0 2)
+  (card (make-posn 0 1)
         SQUIGGLE
         ONE
         SOLID
         PURPLE))
 (define c4
-  (card (make-posn 0 3)
+  (card (make-posn 1 1)
         SQUIGGLE
         TWO
         OUTLINE
@@ -178,3 +187,24 @@
 
 (define loc (list c1 c2 c3 c4 c5 c6 c7))
 (set-exists? loc)
+
+(define draw-card
+  (λ (c scene)
+    (let* ([p (card-posn c)]
+           [p-x (posn-x p)]
+           [p-y (posn-y p)]
+           [x (+ (+ (* GAP (add1 p-x)) (* CARD-WIDTH p-x)) (/ CARD-WIDTH 2))]
+           [y (+ (+ (* GAP (add1 p-y)) (* CARD-HEIGHT p-y)) (/ CARD-HEIGHT 2))])
+      (println x)
+      (println y)
+      (place-image
+       (rectangle CARD-WIDTH CARD-HEIGHT "solid" CARD-COLOR)
+       x
+       y
+       scene))))
+
+(draw-card c4 (draw-card c3 (draw-card c2 (draw-card c1 FRAME))))
+
+
+
+
