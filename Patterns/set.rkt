@@ -496,25 +496,22 @@
                         x
                         y
                         scene)])
-      (match (list c-shape c-number c-fill)
-        [`("diamond" 1 ,_) (draw-diamond c x y c-fill empty-card)]
-        ['("diamond" 2 "solid") (draw-diamond
-                                 c (+ x (/ DIAMOND-SIZE-LEN 2)) y SOLID
-                                 (draw-diamond c (- x (/ DIAMOND-SIZE-LEN 2)) y SOLID empty-card))]
-        ['("diamond" 2 "outline") (draw-diamond
-                                   c (+ x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE
-                                   (draw-diamond c (- x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE empty-card))]
-        ['("diamond" 3 "solid") (draw-diamond
-                                 c (+ x DIAMOND-SIZE-LEN) y SOLID
+      (match (list c-shape c-number)
+        ['("diamond" 1) (draw-diamond c x y c-fill empty-card)]
+        ['("diamond" 2) (draw-diamond
+                                 c (+ x (/ DIAMOND-SIZE-LEN 2)) y c-fill
+                                 (draw-diamond c (- x (/ DIAMOND-SIZE-LEN 2)) y c-fill empty-card))]
+        ['("diamond" 3) (draw-diamond
+                                 c (+ x DIAMOND-SIZE-LEN) y c-fill
                                  (draw-diamond
-                                  c x y SOLID
-                                  (draw-diamond c (- x DIAMOND-SIZE-LEN) y SOLID empty-card)))]
-        ['("diamond" 3 "outline") (draw-diamond
-                                   c (+ x DIAMOND-SIZE-LEN) y OUTLINE
-                                   (draw-diamond
-                                    c x y OUTLINE
-                                    (draw-diamond c (- x DIAMOND-SIZE-LEN) y OUTLINE empty-card)))]
-        [_ empty-card]))))
+                                  c x y c-fill
+                                  (draw-diamond c (- x DIAMOND-SIZE-LEN) y c-fill empty-card)))]
+        ['("oval" 1) empty-card]
+        ['("oval" 2) empty-card]
+        ['("oval" 3) empty-card]
+        ['("squiggle" 1) empty-card]
+        ['("squiggle" 2) empty-card]
+        ['("squiggle" 3) empty-card]))))
 
 (define draw-world
   (λ (loc)
