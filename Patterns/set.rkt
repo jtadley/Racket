@@ -37,8 +37,8 @@
 ;     ;;;            ;;;     ;;;              ;;;     ;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;   
 ;     ;;;            ;;;    ;;;;              ;;;;    ;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;   
 ;                                                                                                  
-(define MAZE-WIDTH 800)
-(define MAZE-HEIGHT 800)
+(define MAZE-WIDTH 400)
+(define MAZE-HEIGHT 400)
 (define MAZE-SIZE 5)
 (define MAZE-OFFSET (* 10 MAZE-SIZE))
 (define BG_COLOR CARD-COLOR)
@@ -365,22 +365,22 @@
 
 (define c1
   (card (make-posn 0 0)
-        SQUIGGLE
-        TWO
+        DIAMOND
+        ONE
         PATTERN
-        PURPLE))
+        GREEN))
 (define c2
   (card (make-posn 1 0)
-        SQUIGGLE
-        THREE
+        DIAMOND
+        TWO
         PATTERN
         PURPLE))
 (define c3
   (card (make-posn 2 0)
-        SQUIGGLE
-        ONE
-        SOLID
-        PURPLE))
+        DIAMOND
+        THREE
+        PATTERN
+        RED))
 (define c4
   (card (make-posn 0 1)
         DIAMOND
@@ -443,19 +443,43 @@
   (λ (c)
     (match (list (card-color c) (card-fill c))
       ['("red" "solid") RED-COLOR]
-      ['("red" "outline") RED-PEN]
+      [`("red" ,_) RED-PEN]
       ['("green" "solid") GREEN-COLOR]
-      ['("green" "outline") GREEN-PEN]
+      [`("green" ,_) GREEN-PEN]
       ['("purple" "solid") PURPLE-COLOR]
-      ['("purple" "outline") PURPLE-PEN])))
+      [`("purple" ,_) PURPLE-PEN])))
+
+(define get-card-maze
+  (λ (c)
+    (match (card-color c)
+      ["red" RED-MAZE]
+      ["green" GREEN-MAZE]
+      ["purple" PURPLE-MAZE])))
 
 (define draw-diamond
-  (λ (x y fill pen/color scene)
-    (place-image
-     (rhombus DIAMOND-SIZE-LEN 45 fill pen/color)
-     x
-     y
-     scene)))
+  (λ (c x y fill scene)
+    (let* ([pen/color (get-card-pen/color c)])
+      (match fill
+        ["pattern" (let* ([r (rhombus DIAMOND-SIZE-LEN 45 OUTLINE pen/color)]
+                          [r-width/2 (/ (image-width r) 2)]
+                          [r-height/2 (/ (image-height r) 2)])
+                     (place-image (place-image
+                                   r
+                                   r-width/2
+                                   r-height/2
+                                   (place-image
+                                    (get-card-maze c)
+                                    r-width/2
+                                    r-height/2
+                                    r))
+                                  x
+                                  y
+                                  scene))]
+        [_ (place-image
+            (rhombus DIAMOND-SIZE-LEN 45 fill pen/color)
+            x
+            y
+            scene)]))))
 
 (define draw-card
   (λ (c scene)
@@ -473,32 +497,31 @@
                         y
                         scene)])
       (match (list c-shape c-number c-fill)
-        ['("diamond" 1 "solid") (draw-diamond x y SOLID (get-card-pen/color c) empty-card)]
-        ['("diamond" 1 "outline") (draw-diamond x y OUTLINE (get-card-pen/color c) empty-card)]
-        ['("diamond" 1 "pattern") empty-card]
+        [`("diamond" 1 ,_) (draw-diamond c x y c-fill empty-card)]
         ['("diamond" 2 "solid") (draw-diamond
-                                 (+ x (/ DIAMOND-SIZE-LEN 2)) y SOLID (get-card-pen/color c)
-                                 (draw-diamond (- x (/ DIAMOND-SIZE-LEN 2)) y SOLID (get-card-pen/color c) empty-card))]
+                                 c (+ x (/ DIAMOND-SIZE-LEN 2)) y SOLID
+                                 (draw-diamond c (- x (/ DIAMOND-SIZE-LEN 2)) y SOLID empty-card))]
         ['("diamond" 2 "outline") (draw-diamond
-                                 (+ x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE (get-card-pen/color c)
-                                 (draw-diamond (- x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE (get-card-pen/color c) empty-card))]
+                                   c (+ x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE
+                                   (draw-diamond c (- x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE empty-card))]
         ['("diamond" 3 "solid") (draw-diamond
-                                 (+ x DIAMOND-SIZE-LEN) y SOLID (get-card-pen/color c)
+                                 c (+ x DIAMOND-SIZE-LEN) y SOLID
                                  (draw-diamond
-                                  x y SOLID (get-card-pen/color c)
-                                  (draw-diamond (- x DIAMOND-SIZE-LEN) y SOLID (get-card-pen/color c) empty-card)))]
+                                  c x y SOLID
+                                  (draw-diamond c (- x DIAMOND-SIZE-LEN) y SOLID empty-card)))]
         ['("diamond" 3 "outline") (draw-diamond
-                                 (+ x DIAMOND-SIZE-LEN) y OUTLINE (get-card-pen/color c)
-                                 (draw-diamond
-                                  x y OUTLINE (get-card-pen/color c)
-                                  (draw-diamond (- x DIAMOND-SIZE-LEN) y OUTLINE (get-card-pen/color c) empty-card)))]
+                                   c (+ x DIAMOND-SIZE-LEN) y OUTLINE
+                                   (draw-diamond
+                                    c x y OUTLINE
+                                    (draw-diamond c (- x DIAMOND-SIZE-LEN) y OUTLINE empty-card)))]
         [_ empty-card]))))
 
 (define draw-world
- (λ (loc)
-   (cond
-     [(null? loc) FRAME]
-     [else (draw-card (car loc)
-                      (draw-world (cdr loc)))])))
+  (λ (loc)
+    (cond
+      [(null? loc) FRAME]
+      [else (draw-card (car loc)
+                       (draw-world (cdr loc)))])))
 
 (draw-world loc)
+;(draw-diamond c1 200 200 PATTERN FRAME)
