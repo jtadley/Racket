@@ -462,6 +462,9 @@
 (define add2
   (λ (x) (add1 (add1 x))))
 
+(define add3
+  (λ (x) (add1 (add2 x))))
+
 (define trim-diamond
   (λ (width height scene)
     (let* ([pen-size/2 (add0.5 (/ PEN-SIZE 2))]
@@ -483,7 +486,22 @@
                    (make-posn (add2 width) (- height/2 pen-size/2)))
              SOLID
              CARD-COLOR)]
-           [all-cleared top-cleared])
+           [top-bottom-left-cleared
+            (add-polygon
+             top-cleared
+             (list (make-posn -0.5 (add3 height))
+                   (make-posn -0.5 (+ height/2 pen-size/2))
+                   (make-posn width/2 (add2 height)))
+             SOLID
+             CARD-COLOR)]
+           [all-cleared
+            (add-polygon
+             top-bottom-left-cleared
+             (list (make-posn (add3 width) (add3 height))
+                   (make-posn (+ width/2 pen-size/2) (add3 height))
+                   (make-posn (add2 width) (+ height/2 pen-size/2)))
+             SOLID
+             CARD-COLOR)])
       all-cleared)))
 
 (define draw-diamond
