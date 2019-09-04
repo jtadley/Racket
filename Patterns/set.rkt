@@ -172,15 +172,15 @@
         PURPLE))
 (define c4
   (card (make-posn 0 1)
-        SQUIGGLE
+        DIAMOND
         TWO
         OUTLINE
         PURPLE))
 (define c5
   (card (make-posn 1 1)
-        SQUIGGLE
-        TWO
-        PATTERN
+        DIAMOND
+        THREE
+        OUTLINE
         RED))
 (define c6
   (card (make-posn 2 1)
@@ -268,11 +268,19 @@
         ['("diamond" 2 "solid") (draw-diamond
                                  (+ x (/ DIAMOND-SIZE-LEN 2)) y SOLID (get-card-pen/color c)
                                  (draw-diamond (- x (/ DIAMOND-SIZE-LEN 2)) y SOLID (get-card-pen/color c) empty-card))]
+        ['("diamond" 2 "outline") (draw-diamond
+                                 (+ x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE (get-card-pen/color c)
+                                 (draw-diamond (- x (/ DIAMOND-SIZE-LEN 2)) y OUTLINE (get-card-pen/color c) empty-card))]
         ['("diamond" 3 "solid") (draw-diamond
                                  (+ x DIAMOND-SIZE-LEN) y SOLID (get-card-pen/color c)
                                  (draw-diamond
                                   x y SOLID (get-card-pen/color c)
                                   (draw-diamond (- x DIAMOND-SIZE-LEN) y SOLID (get-card-pen/color c) empty-card)))]
+        ['("diamond" 3 "outline") (draw-diamond
+                                 (+ x DIAMOND-SIZE-LEN) y OUTLINE (get-card-pen/color c)
+                                 (draw-diamond
+                                  x y OUTLINE (get-card-pen/color c)
+                                  (draw-diamond (- x DIAMOND-SIZE-LEN) y OUTLINE (get-card-pen/color c) empty-card)))]
         [_ empty-card]))))
 
 (define draw-world
