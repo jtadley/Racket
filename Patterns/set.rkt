@@ -463,11 +463,39 @@
           y
           scene)]))))
 
+(define trim-oval
+  (λ (x y width height scene)
+    (let* ([pen (make-pen CARD-COLOR 20 "solid" "round" "miter")])
+      (place-image
+       (ellipse (+ 25 OVAL-WIDTH) (+ 25 OVAL-HEIGHT) OUTLINE pen)
+       (/ OVAL-WIDTH 2)
+       (/ OVAL-HEIGHT 2)
+       scene))))
+
 (define draw-oval
   (λ (c x y fill scene)
     (let* ([pen/color (get-card-pen/color c)])
       (match fill
-        ["pattern" scene]
+        ["pattern" (let* ([e (ellipse OVAL-WIDTH OVAL-HEIGHT OUTLINE pen/color)]
+                          [e-width (image-width e)]
+                          [e-height (image-height e)]
+                          [e-width/2 (/ e-width 2)]
+                          [e-height/2 (/ e-height 2)]
+                          [untrimmed-oval (place-image
+                                           e
+                                           e-width/2
+                                           e-height/2
+                                           (place-image
+                                            (get-card-maze c)
+                                            e-width/2
+                                            e-height/2
+                                            e))]
+                          [trimmed-oval (trim-oval x y e-width e-height untrimmed-oval)])
+                     (place-image
+                      trimmed-oval
+                      x
+                      y
+                      scene))]
         [_ (place-image
             (ellipse OVAL-WIDTH OVAL-HEIGHT fill pen/color)
             x
@@ -624,13 +652,13 @@
   (card (make-posn 0 2)
         OVAL
         TWO
-        SOLID
-        PURPLE))
+        PATTERN
+        RED))
 (define o8
   (card (make-posn 1 2)
         OVAL
         THREE
-        OUTLINE
+        PATTERN
         GREEN))
 
 (define loo (list o1 o2 o4 o5 o7 o8))
