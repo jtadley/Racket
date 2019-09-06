@@ -1,6 +1,7 @@
 #lang racket
 
 (require 2htdp/image
+         2htdp/universe
          lang/posn
          racket/struct)
 
@@ -217,6 +218,8 @@
 (define GAP 40)
 (define CARD-HEIGHT 200)
 (define CARD-WIDTH 280)
+(define MAX-X 2)
+(define MAX-Y 3)
 
 (define OVAL "oval")
 (define DIAMOND "diamond")
@@ -252,6 +255,10 @@
                               (make-posn 20 -30)
                               (make-pulled-point 1/2 25 0 60 1/2 -25)
                               (make-posn -20 -30)))
+(define SQUIGGLE-OUTLINE-POINTS (list (make-pulled-point 1/2 -25 -20 -20 1/2 25)
+                                      (make-posn 40 -50)
+                                      (make-pulled-point 1/2 25 -20 80 1/2 -25)
+                                      (make-posn -40 -50)))
 
 (struct card
   (posn ; lang/posn
@@ -259,6 +266,7 @@
    number ; 1 | 2 | 3
    fill ; solid | outline | pattern
    color ; red | green | purple
+   selected ; #t | #f
    )
   #:methods gen:custom-write
   [(define write-proc
@@ -269,7 +277,30 @@
               (card-shape c)
               (card-number c)
               (card-fill c)
-              (card-color c)))))])
+              (card-color c)
+              (card-selected c)))))])
+
+(define make-card
+  (λ (p s n f c slctd)
+    (card p s n f c slctd)))
+
+(define select-card
+  (λ (c)
+    (let ([p (card-posn c)]
+          [s (card-shape c)]
+          [n (card-number c)]
+          [f (card-fill c)]
+          [c (card-color c)])
+      (make-card p s n f c #t))))
+
+(define unselect-card
+  (λ (c)
+    (let ([p (card-posn c)]
+          [s (card-shape c)]
+          [n (card-number c)]
+          [f (card-fill c)]
+          [c (card-color c)])
+      (make-card p s n f c #f))))
 
 (define card-equal?
   (λ (c1 c2)
@@ -468,7 +499,7 @@
           scene)]))))
 
 (define trim-oval
-  (λ (x y width height scene)
+  (λ (width height scene)
     (let* ([pen (make-pen CARD-COLOR 20 "solid" "round" "miter")]
            [outlined-oval (place-image
                            (ellipse (+ 25 OVAL-WIDTH) (+ 25 OVAL-HEIGHT) OUTLINE pen)
@@ -496,7 +527,7 @@
                                             e-width/2
                                             e-height/2
                                             e))]
-                          [trimmed-oval (trim-oval x y e-width e-height untrimmed-oval)])
+                          [trimmed-oval (trim-oval e-width e-height untrimmed-oval)])
                      (place-image
                       trimmed-oval
                       x
@@ -508,11 +539,40 @@
             y
             scene)]))))
 
+(define trim-squiggle
+  (λ (width height scene)
+    (let* ([pen (make-pen CARD-COLOR 20 "solid" "round" "miter")]
+           [outlined-squiggle (place-image
+                               (polygon SQUIGGLE-OUTLINE-POINTS OUTLINE pen)
+                               (/ width 2)
+                               (/ height 2)
+                               scene)])
+      outlined-squiggle)))
+
 (define draw-squiggle
   (λ (c x y fill scene)
     (let* ([pen/color (get-card-pen/color c)])
       (match fill
-        ["pattern" scene]
+        ["pattern" (let* ([s (polygon SQUIGGLE-POINTS OUTLINE pen/color)]
+                          [s-width (image-width s)]
+                          [s-height (image-height s)]
+                          [s-width/2 (/ s-width 2)]
+                          [s-height/2 (/ s-height 2)]
+                          [untrimmed-squiggle (place-image
+                                               s
+                                               s-width/2
+                                               s-height/2
+                                               (place-image
+                                                (get-card-maze c)
+                                                s-width/2
+                                                s-height/2
+                                                s))]
+                          [trimmed-squiggle (trim-squiggle s-width s-height untrimmed-squiggle)])
+                     (place-image
+                      trimmed-squiggle
+                      x
+                      y
+                      scene))]
         [_ (place-image
             (polygon SQUIGGLE-POINTS
                      fill
@@ -562,166 +622,332 @@
       [else (draw-card (car loc)
                        (draw-world (cdr loc)))])))
 
+(define get-random-card
+  (λ (x y)
+    (letrec ([get-random-123
+              (λ ()
+                (let ([rand (random)])
+                  (cond
+                    [(< rand (/ 1 3)) 1]
+                    [(< rand (/ 2 3)) 2]
+                    [else 3])))]
+             [random-shape
+              (let ([rand (get-random-123)])
+                (match rand
+                  [1 DIAMOND]
+                  [2 OVAL]
+                  [3 SQUIGGLE]))]
+             [random-number
+              (get-random-123)]
+             [random-fill
+              (let ([rand (get-random-123)])
+                (match rand
+                  [1 SOLID]
+                  [2 OUTLINE]
+                  [3 PATTERN]))]
+             [random-color
+              (let ([rand (get-random-123)])
+                (match rand
+                  [1 RED]
+                  [2 GREEN]
+                  [3 PURPLE]))])
+      (make-card
+       (make-posn x y)
+       random-shape
+       random-number
+       random-fill
+       random-color
+       #f))))
+
+;; takes a list of cards, returns if a card has a posn equal to (x,y)
+(define x-y-card-in-world?
+  (λ (x y loc)
+    (cond
+      [(null? loc) #f]
+      [else (let* ([a (card-posn (car loc))]
+                   [d (cdr loc)]
+                   [a-x (posn-x a)]
+                   [a-y (posn-y a)])
+              (or (and
+                   (= x a-x)
+                   (= y a-y))
+                  (x-y-card-in-world? x y d)))])))
+
+;; take a list of cards, returns a list of cards such that all posns are filled and a set is possible
+(define fill-world
+  (λ (loc)
+    (letrec ([helper
+              (λ (x y)
+                (cond
+                  [(> y MAX-Y) loc]
+                  [(> x MAX-X) (helper 0 (add1 y))]
+                  [(x-y-card-in-world? x y loc) (helper (add1 x) y)]
+                  [else (cons (get-random-card x y)
+                              (helper (add1 x) y))]))])
+      (let ([ans (helper 0 0)])
+        (if (set-exists? ans)
+            ans
+            (fill-world loc))))))
+
+(define get-card-by-xy
+  (λ (loc x y)
+    (cond
+      [(null? loc) #f]
+      [else
+       (let* ([a (car loc)]
+              [d (cdr loc)]
+              [p (card-posn a)]
+              [p-x (posn-x p)]
+              [p-y (posn-y p)]
+              [card-x-min (+ (* GAP (add1 p-x)) (* CARD-WIDTH p-x))]
+              [card-x-max (+ card-x-min CARD-WIDTH)]
+              [card-y-min (+ (* GAP (add1 p-y)) (* CARD-HEIGHT p-y))]
+              [card-y-max (+ card-y-min CARD-HEIGHT)])
+         (if (and
+              (>= x card-x-min)
+              (<= x card-x-max)
+              (>= y card-y-min)
+              (<= y card-y-max))
+             a
+             (get-card-by-xy d x y)))])))
+
+(define mouse-controls
+  (λ (world x y mouse-event)
+    (cond
+      [(eqv? mouse-event "button-down")
+       ]
+      [else world])))
+
+
+(define empty-world '())
+
+(big-bang (fill-world empty-world)
+  (to-draw draw-world)
+  (on-mouse mouse-controls))
+                                                                                                           
+;                                                                                                                          
+;                                                                                                                          
+;                                                                                                                          
+;                                                                                                                          
+;    ;;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;            ;;;;;;;          ;;;;;;;;;;;;;;;;;;;;           ;;;;;;;        
+;    ;;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;          ;;;;;;;;;;;        ;;;;;;;;;;;;;;;;;;;;         ;;;;;;;;;;;      
+;    ;;;;;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;;         ;;;;;;;;;;;;;;      ;;;;;;;;;;;;;;;;;;;;        ;;;;;;;;;;;;;;    
+;            ;;;;               ;;;                     ;;;;       ;;;;              ;;;;               ;;;;       ;;;;    
+;            ;;;;               ;;;                    ;;;;          ;;              ;;;;              ;;;;          ;;    
+;            ;;;;               ;;;                    ;;;                           ;;;;              ;;;                 
+;            ;;;;               ;;;                    ;;;                           ;;;;              ;;;                 
+;            ;;;;               ;;;                    ;;;                           ;;;;              ;;;                 
+;            ;;;;               ;;;                    ;;;;                          ;;;;              ;;;;                
+;            ;;;;               ;;;                     ;;;;                         ;;;;               ;;;;               
+;            ;;;;               ;;;                     ;;;;;;;                      ;;;;               ;;;;;;;            
+;            ;;;;               ;;;;;;;;;;;;;;           ;;;;;;;;                    ;;;;                ;;;;;;;;          
+;            ;;;;               ;;;;;;;;;;;;;;             ;;;;;;;;                  ;;;;                  ;;;;;;;;        
+;            ;;;;               ;;;;;;;;;;;;;;               ;;;;;;;;                ;;;;                    ;;;;;;;;      
+;            ;;;;               ;;;                             ;;;;;;;              ;;;;                       ;;;;;;;    
+;            ;;;;               ;;;                               ;;;;;;             ;;;;                         ;;;;;;   
+;            ;;;;               ;;;                                 ;;;;             ;;;;                           ;;;;   
+;            ;;;;               ;;;                                  ;;;             ;;;;                            ;;;   
+;            ;;;;               ;;;                                  ;;;             ;;;;                            ;;;   
+;            ;;;;               ;;;                                  ;;;             ;;;;                            ;;;   
+;            ;;;;               ;;;                    ;             ;;;             ;;;;              ;             ;;;   
+;            ;;;;               ;;;                   ;;;;          ;;;;             ;;;;             ;;;;          ;;;;   
+;            ;;;;               ;;;                   ;;;;;;       ;;;;              ;;;;             ;;;;;;       ;;;;    
+;            ;;;;               ;;;;;;;;;;;;;;;;       ;;;;;;;;;;;;;;;               ;;;;              ;;;;;;;;;;;;;;;     
+;            ;;;;               ;;;;;;;;;;;;;;;;         ;;;;;;;;;;;;                ;;;;                ;;;;;;;;;;;;      
+;            ;;;;               ;;;;;;;;;;;;;;;;            ;;;;;;;                  ;;;;                   ;;;;;;;        
+;                                                                                                                          
+                                                                                       
 (define c1
-  (card (make-posn 0 0)
+  (make-card (make-posn 0 0)
         DIAMOND
         ONE
         PATTERN
-        GREEN))
+        GREEN
+        #f))
 (define c2
-  (card (make-posn 1 0)
+  (make-card (make-posn 1 0)
         DIAMOND
         TWO
         PATTERN
-        PURPLE))
+        PURPLE
+        #f))
 (define c3
-  (card (make-posn 2 0)
+  (make-card (make-posn 2 0)
         DIAMOND
         THREE
         PATTERN
-        RED))
+        RED
+        #f))
 (define c4
-  (card (make-posn 0 1)
+  (make-card (make-posn 0 1)
         DIAMOND
         TWO
         OUTLINE
-        PURPLE))
+        PURPLE
+        #f))
 (define c5
-  (card (make-posn 1 1)
+  (make-card (make-posn 1 1)
         DIAMOND
         THREE
         OUTLINE
-        RED))
+        RED
+        #f))
 (define c6
-  (card (make-posn 2 1)
+  (make-card (make-posn 2 1)
         SQUIGGLE
         TWO
         PATTERN
-        GREEN))
+        GREEN
+        #f))
 (define c7
-  (card (make-posn 0 2)
+  (make-card (make-posn 0 2)
         DIAMOND
         TWO
         SOLID
-        PURPLE))
+        PURPLE
+        #f))
 (define c8
-  (card (make-posn 1 2)
+  (make-card (make-posn 1 2)
         DIAMOND
         THREE
         SOLID
-        GREEN))
+        GREEN
+        #f))
 (define c9
-  (card (make-posn 2 2)
+  (make-card (make-posn 2 2)
         OVAL
         TWO
         OUTLINE
-        PURPLE))
+        PURPLE
+        #f))
 (define c10
-  (card (make-posn 0 3)
+  (make-card (make-posn 0 3)
         DIAMOND
         ONE
         SOLID
-        RED))
+        RED
+        #f))
 (define c11
-  (card (make-posn 1 3)
+  (make-card (make-posn 1 3)
         DIAMOND
         ONE
         OUTLINE
-        PURPLE))
+        PURPLE
+        #f))
 (define c12
-  (card (make-posn 2 3)
+  (make-card (make-posn 2 3)
         DIAMOND
         ONE
         OUTLINE
-        GREEN))
+        GREEN
+        #f))
 
 (define lod (list c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12))
 ;(set-exists? lod)
-(draw-world lod)
+;(draw-world lod)
 
 (define o1
-  (card (make-posn 0 0)
+  (make-card (make-posn 0 0)
         OVAL
         ONE
         SOLID
-        RED))
+        RED
+        #f))
 (define o2
-  (card (make-posn 1 0)
+  (make-card (make-posn 1 0)
         DIAMOND
         ONE
         SOLID
-        RED))
+        RED
+        #f))
 (define o4
-  (card (make-posn 0 1)
+  (make-card (make-posn 0 1)
         OVAL
         ONE
         OUTLINE
-        GREEN))
+        GREEN
+        #f))
 (define o5
-  (card (make-posn 1 1)
+  (make-card (make-posn 1 1)
         OVAL
         ONE
         PATTERN
-        PURPLE))
+        PURPLE
+        #f))
 (define o7
-  (card (make-posn 0 2)
+  (make-card (make-posn 0 2)
         OVAL
         TWO
         PATTERN
-        RED))
+        RED
+        #f))
 (define o8
-  (card (make-posn 1 2)
+  (make-card (make-posn 1 2)
         OVAL
         THREE
         PATTERN
-        GREEN))
+        GREEN
+        #f))
 
 (define loo (list o1 o2 o4 o5 o7 o8))
-(draw-world loo)
-
-(define p (polygon (list (make-pulled-point 1/2 -20 0 0 1/2 20)
-                         (make-posn 20 -10)
-                         (make-pulled-point 1/2 20 0 60 1/2 -20)
-                         (make-posn -20 -10))
-                   "outline"
-                   "burlywood"))
+;(draw-world loo)
 
 (define s1
-  (card (make-posn 0 0)
+  (make-card (make-posn 0 0)
         SQUIGGLE
         ONE
         SOLID
-        RED))
+        RED
+        #f))
 (define s2
-  (card (make-posn 1 0)
+  (make-card (make-posn 1 0)
         DIAMOND
         ONE
         SOLID
-        RED))
+        RED
+        #f))
 (define s4
-  (card (make-posn 0 1)
+  (make-card (make-posn 0 1)
         SQUIGGLE
         ONE
         OUTLINE
-        GREEN))
+        GREEN
+        #f))
 (define s5
-  (card (make-posn 1 1)
+  (make-card (make-posn 1 1)
         SQUIGGLE
         ONE
         PATTERN
-        PURPLE))
+        PURPLE
+        #f))
 (define s7
-  (card (make-posn 0 2)
+  (make-card (make-posn 0 2)
         SQUIGGLE
         TWO
         PATTERN
-        RED))
+        RED
+        #f))
 (define s8
-  (card (make-posn 1 2)
+  (make-card (make-posn 1 2)
         SQUIGGLE
         THREE
         PATTERN
-        GREEN))
+        GREEN
+        #f))
+(define s9
+  (make-card (make-posn 0 3)
+        SQUIGGLE
+        TWO
+        OUTLINE
+        PURPLE
+        #f))
+(define s10
+  (make-card (make-posn 1 3)
+        SQUIGGLE
+        THREE
+        SOLID
+        PURPLE
+        #f))
 
-(define los (list s1 s2 s4 s5 s7 s8))
-(draw-world los)
+(define los (list s1 s2 s4 s5 s7 s8 s9 s10))
+;(draw-world los)
