@@ -210,6 +210,7 @@
 ;           ;;;;;;;             ;;;;;;;;;;;;;;;;             ;;;;          
 ;                                                                                                                                          
 
+(define score 0)
 
 (define FRAME-HEIGHT 1000)
 (define FRAME-WIDTH 1000)
@@ -251,6 +252,9 @@
 (define SELECTED-COLOR "maroon")
 (define SELECTED-PEN-SIZE 5)
 (define SELECTED-PEN (make-pen SELECTED-COLOR SELECTED-PEN-SIZE "solid" "round" "miter"))
+
+(define SCORE-SIZE 20)
+(define SCORE-COLOR "black")
 
 (define DIAMOND-SIZE-LEN (/ CARD-HEIGHT 3))
 (define OVAL-WIDTH 51 #;DIAMOND-SIZE-LEN)
@@ -637,7 +641,11 @@
 (define draw-world
   (λ (loc)
     (cond
-      [(null? loc) FRAME]
+      [(null? loc) (place-image
+                    (text (number->string score) SCORE-SIZE SCORE-COLOR)
+                    (/ GAP 2)
+                    (/ GAP 2)
+                    FRAME)]
       [else (draw-card (car loc)
                        (draw-world (cdr loc)))])))
 
@@ -697,9 +705,10 @@
     (cond
       [(null? loc) '()]
       [else (let* ([a (car loc)]
+                   [p (card-posn a)]
                    [d (cdr loc)]
-                   [a-x (posn-x a)]
-                   [a-y (posn-y a)])
+                   [a-x (posn-x p)]
+                   [a-y (posn-y p)])
               (if (and (= x a-x)
                        (= y a-y))
                   d
@@ -741,7 +750,7 @@
               (>= y card-y-min)
               (<= y card-y-max))
              a
-             (get-card-by-xy d x y)))])))
+             (get-card-by-xy x y d)))])))
 
 (define get-selected-cards
   (λ (loc)
@@ -763,11 +772,11 @@
                     [c-x (posn-x c-p)]
                     [c-y (posn-y c-p)]
                     [new-card (flip-selected c)]
-                    [loc (cons new-card (remove-card-by-xy c-x c-y world))]
-                    [selected-cards (get-selected-cards loc)])
+                    [world (cons new-card (remove-card-by-xy c-x c-y world))]
+                    [selected-cards (get-selected-cards world)])
                (if (= (length selected-cards) 3)
                    'todo
-                   loc))
+                   world))
              world))]
       [else world])))
 
