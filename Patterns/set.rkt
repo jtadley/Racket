@@ -248,6 +248,10 @@
 (define DIAMOND-SIZE-LEN (/ CARD-HEIGHT 3))
 (define OVAL-WIDTH 51 #;DIAMOND-SIZE-LEN)
 (define OVAL-HEIGHT 123 #;(* (sqrt (+ (expt DIAMOND-SIZE-LEN 2) (expt (/ DIAMOND-SIZE-LEN 2) 2))) 2))
+(define SQUIGGLE-POINTS (list (make-pulled-point 1/2 -25 0 0 1/2 25)
+                              (make-posn 20 -30)
+                              (make-pulled-point 1/2 25 0 60 1/2 -25)
+                              (make-posn -20 -30)))
 
 (struct card
   (posn ; lang/posn
@@ -465,12 +469,14 @@
 
 (define trim-oval
   (λ (x y width height scene)
-    (let* ([pen (make-pen CARD-COLOR 20 "solid" "round" "miter")])
-      (place-image
-       (ellipse (+ 25 OVAL-WIDTH) (+ 25 OVAL-HEIGHT) OUTLINE pen)
-       (/ OVAL-WIDTH 2)
-       (/ OVAL-HEIGHT 2)
-       scene))))
+    (let* ([pen (make-pen CARD-COLOR 20 "solid" "round" "miter")]
+           [outlined-oval (place-image
+                           (ellipse (+ 25 OVAL-WIDTH) (+ 25 OVAL-HEIGHT) OUTLINE pen)
+                           (/ OVAL-WIDTH 2)
+                           (/ OVAL-HEIGHT 2)
+                           scene)]
+           [removed-ttl outlined-oval])
+      removed-ttl)))
 
 (define draw-oval
   (λ (c x y fill scene)
@@ -504,7 +510,16 @@
 
 (define draw-squiggle
   (λ (c x y fill scene)
-    scene))
+    (let* ([pen/color (get-card-pen/color c)])
+      (match fill
+        ["pattern" scene]
+        [_ (place-image
+            (polygon SQUIGGLE-POINTS
+                     fill
+                     pen/color)
+            x
+            y
+            scene)]))))
 
 (define get-card-drawer
   (λ (c)
@@ -663,3 +678,50 @@
 
 (define loo (list o1 o2 o4 o5 o7 o8))
 (draw-world loo)
+
+(define p (polygon (list (make-pulled-point 1/2 -20 0 0 1/2 20)
+                         (make-posn 20 -10)
+                         (make-pulled-point 1/2 20 0 60 1/2 -20)
+                         (make-posn -20 -10))
+                   "outline"
+                   "burlywood"))
+
+(define s1
+  (card (make-posn 0 0)
+        SQUIGGLE
+        ONE
+        SOLID
+        RED))
+(define s2
+  (card (make-posn 1 0)
+        DIAMOND
+        ONE
+        SOLID
+        RED))
+(define s4
+  (card (make-posn 0 1)
+        SQUIGGLE
+        ONE
+        OUTLINE
+        GREEN))
+(define s5
+  (card (make-posn 1 1)
+        SQUIGGLE
+        ONE
+        PATTERN
+        PURPLE))
+(define s7
+  (card (make-posn 0 2)
+        SQUIGGLE
+        TWO
+        PATTERN
+        RED))
+(define s8
+  (card (make-posn 1 2)
+        SQUIGGLE
+        THREE
+        PATTERN
+        GREEN))
+
+(define los (list s1 s2 s4 s5 s7 s8))
+(draw-world los)
