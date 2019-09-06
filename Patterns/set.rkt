@@ -379,6 +379,10 @@
      (is-fill-set? c1 c2 c3)
      (is-color-set? c1 c2 c3))))
 
+(define is-set-from-loc?
+  (λ (loc)
+    (is-set? (car loc) (cadr loc) (caddr loc))))
+
 (define all-pairs
   (λ (loc)
     (letrec
@@ -762,6 +766,23 @@
       [else
        (get-selected-cards (cdr loc))])))
 
+(define remove-selected-cards
+  (λ (loc)
+    (cond
+      [(null? loc) '()]
+      [(card-selected (car loc)) (remove-selected-cards (cdr loc))]
+      [else (cons (car loc) (remove-selected-cards (cdr loc)))])))
+
+(define unselect-cards
+  (λ (loc)
+    (cond
+      [(null? loc) '()]
+      [(card-selected (car loc))
+       (cons (unselect-card (car loc))
+             (unselect-cards (cdr loc)))]
+      [else (cons (car loc)
+                  (unselect-cards (cdr loc)))])))
+
 (define mouse-controls
   (λ (world x y mouse-event)
     (cond
@@ -775,7 +796,11 @@
                     [world (cons new-card (remove-card-by-xy c-x c-y world))]
                     [selected-cards (get-selected-cards world)])
                (if (= (length selected-cards) 3)
-                   'todo
+                   (if (is-set-from-loc? selected-cards)
+                       (begin
+                         (set! score (add1 score))
+                         (fill-world (remove-selected-cards world)))
+                       (unselect-cards world))
                    world))
              world))]
       [else world])))
