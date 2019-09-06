@@ -248,6 +248,10 @@
 (set! PEN GREEN-PEN)
 (define GREEN-MAZE (draw_maze (- 0 MAZE-OFFSET) (- 0 MAZE-OFFSET)))
 
+(define SELECTED-COLOR "maroon")
+(define SELECTED-PEN-SIZE 5)
+(define SELECTED-PEN (make-pen SELECTED-COLOR SELECTED-PEN-SIZE "solid" "round" "miter"))
+
 (define DIAMOND-SIZE-LEN (/ CARD-HEIGHT 3))
 (define OVAL-WIDTH 51 #;DIAMOND-SIZE-LEN)
 (define OVAL-HEIGHT 123 #;(* (sqrt (+ (expt DIAMOND-SIZE-LEN 2) (expt (/ DIAMOND-SIZE-LEN 2) 2))) 2))
@@ -301,6 +305,12 @@
           [f (card-fill c)]
           [c (card-color c)])
       (make-card p s n f c #f))))
+
+(define flip-selected
+  (λ (c)
+    (if (card-selected c)
+        (unselect-card c)
+        (select-card c))))
 
 (define card-equal?
   (λ (c1 c2)
@@ -593,17 +603,26 @@
     (let* ([c-shape (card-shape c)]
            [c-number (card-number c)]
            [c-fill (card-fill c)]
+           [c-selected (card-selected c)]
            [p (card-posn c)]
            [p-x (posn-x p)]
            [p-y (posn-y p)]
            [x (+ (+ (* GAP (add1 p-x)) (* CARD-WIDTH p-x)) (/ CARD-WIDTH 2))]
            [y (+ (+ (* GAP (add1 p-y)) (* CARD-HEIGHT p-y)) (/ CARD-HEIGHT 2))]
            [shape-drawer (get-card-drawer c)]
-           [empty-card (place-image
-                        (rectangle CARD-WIDTH CARD-HEIGHT "solid" CARD-COLOR)
-                        x
-                        y
-                        scene)])
+           [card-rectangle-scene (place-image
+                                  (rectangle CARD-WIDTH CARD-HEIGHT "solid" CARD-COLOR)
+                                  x
+                                  y
+                                  scene)]
+           [select-card (λ (scene) (place-image
+                                    (rectangle CARD-WIDTH CARD-HEIGHT "outline" SELECTED-PEN)
+                                    x
+                                    y
+                                    scene))]
+           [empty-card (if c-selected
+                           (select-card card-rectangle-scene)
+                           card-rectangle-scene)])
       (match c-number
         [1 (shape-drawer c x y c-fill empty-card)]
         [2 (shape-drawer
@@ -668,10 +687,23 @@
                    [d (cdr loc)]
                    [a-x (posn-x a)]
                    [a-y (posn-y a)])
-              (or (and
-                   (= x a-x)
-                   (= y a-y))
+              (or (and (= x a-x)
+                       (= y a-y))
                   (x-y-card-in-world? x y d)))])))
+
+
+(define remove-card-by-xy
+  (λ (x y loc)
+    (cond
+      [(null? loc) '()]
+      [else (let* ([a (car loc)]
+                   [d (cdr loc)]
+                   [a-x (posn-x a)]
+                   [a-y (posn-y a)])
+              (if (and (= x a-x)
+                       (= y a-y))
+                  d
+                  (cons a (remove-card-by-xy x y d))))])))
 
 ;; take a list of cards, returns a list of cards such that all posns are filled and a set is possible
 (define fill-world
@@ -690,7 +722,7 @@
             (fill-world loc))))))
 
 (define get-card-by-xy
-  (λ (loc x y)
+  (λ (x y loc)
     (cond
       [(null? loc) #f]
       [else
@@ -711,19 +743,42 @@
              a
              (get-card-by-xy d x y)))])))
 
+(define get-selected-cards
+  (λ (loc)
+    (cond
+      [(null? loc) '()]
+      [(card-selected (car loc))
+       (cons (car loc)
+             (get-selected-cards (cdr loc)))]
+      [else
+       (get-selected-cards (cdr loc))])))
+
 (define mouse-controls
   (λ (world x y mouse-event)
     (cond
       [(eqv? mouse-event "button-down")
-       ]
+       (let ([c (get-card-by-xy x y world)])
+         (if c
+             (let* ([c-p (card-posn c)]
+                    [c-x (posn-x c-p)]
+                    [c-y (posn-y c-p)]
+                    [new-card (flip-selected c)]
+                    [loc (cons new-card (remove-card-by-xy c-x c-y world))]
+                    [selected-cards (get-selected-cards loc)])
+               (if (= (length selected-cards) 3)
+                   'todo
+                   loc))
+             world))]
       [else world])))
 
 
 (define empty-world '())
 
-(big-bang (fill-world empty-world)
-  (to-draw draw-world)
-  (on-mouse mouse-controls))
+(define run
+  (λ ()
+    (big-bang (fill-world empty-world)
+      (to-draw draw-world)
+      (on-mouse mouse-controls))))
                                                                                                            
 ;                                                                                                                          
 ;                                                                                                                          
@@ -759,195 +814,195 @@
                                                                                        
 (define c1
   (make-card (make-posn 0 0)
-        DIAMOND
-        ONE
-        PATTERN
-        GREEN
-        #f))
+             DIAMOND
+             ONE
+             PATTERN
+             GREEN
+             #f))
 (define c2
   (make-card (make-posn 1 0)
-        DIAMOND
-        TWO
-        PATTERN
-        PURPLE
-        #f))
+             DIAMOND
+             TWO
+             PATTERN
+             PURPLE
+             #f))
 (define c3
   (make-card (make-posn 2 0)
-        DIAMOND
-        THREE
-        PATTERN
-        RED
-        #f))
+             DIAMOND
+             THREE
+             PATTERN
+             RED
+             #f))
 (define c4
   (make-card (make-posn 0 1)
-        DIAMOND
-        TWO
-        OUTLINE
-        PURPLE
-        #f))
+             DIAMOND
+             TWO
+             OUTLINE
+             PURPLE
+             #f))
 (define c5
   (make-card (make-posn 1 1)
-        DIAMOND
-        THREE
-        OUTLINE
-        RED
-        #f))
+             DIAMOND
+             THREE
+             OUTLINE
+             RED
+             #f))
 (define c6
   (make-card (make-posn 2 1)
-        SQUIGGLE
-        TWO
-        PATTERN
-        GREEN
-        #f))
+             SQUIGGLE
+             TWO
+             PATTERN
+             GREEN
+             #f))
 (define c7
   (make-card (make-posn 0 2)
-        DIAMOND
-        TWO
-        SOLID
-        PURPLE
-        #f))
+             DIAMOND
+             TWO
+             SOLID
+             PURPLE
+             #f))
 (define c8
   (make-card (make-posn 1 2)
-        DIAMOND
-        THREE
-        SOLID
-        GREEN
-        #f))
+             DIAMOND
+             THREE
+             SOLID
+             GREEN
+             #f))
 (define c9
   (make-card (make-posn 2 2)
-        OVAL
-        TWO
-        OUTLINE
-        PURPLE
-        #f))
+             OVAL
+             TWO
+             OUTLINE
+             PURPLE
+             #f))
 (define c10
   (make-card (make-posn 0 3)
-        DIAMOND
-        ONE
-        SOLID
-        RED
-        #f))
+             DIAMOND
+             ONE
+             SOLID
+             RED
+             #f))
 (define c11
   (make-card (make-posn 1 3)
-        DIAMOND
-        ONE
-        OUTLINE
-        PURPLE
-        #f))
+             DIAMOND
+             ONE
+             OUTLINE
+             PURPLE
+             #f))
 (define c12
   (make-card (make-posn 2 3)
-        DIAMOND
-        ONE
-        OUTLINE
-        GREEN
-        #f))
+             DIAMOND
+             ONE
+             OUTLINE
+             GREEN
+             #f))
 
 (define lod (list c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12))
 ;(set-exists? lod)
-;(draw-world lod)
+(define test1 (λ () (draw-world lod)))
 
 (define o1
   (make-card (make-posn 0 0)
-        OVAL
-        ONE
-        SOLID
-        RED
-        #f))
+             OVAL
+             ONE
+             SOLID
+             RED
+             #f))
 (define o2
   (make-card (make-posn 1 0)
-        DIAMOND
-        ONE
-        SOLID
-        RED
-        #f))
+             DIAMOND
+             ONE
+             SOLID
+             RED
+             #f))
 (define o4
   (make-card (make-posn 0 1)
-        OVAL
-        ONE
-        OUTLINE
-        GREEN
-        #f))
+             OVAL
+             ONE
+             OUTLINE
+             GREEN
+             #f))
 (define o5
   (make-card (make-posn 1 1)
-        OVAL
-        ONE
-        PATTERN
-        PURPLE
-        #f))
+             OVAL
+             ONE
+             PATTERN
+             PURPLE
+             #f))
 (define o7
   (make-card (make-posn 0 2)
-        OVAL
-        TWO
-        PATTERN
-        RED
-        #f))
+             OVAL
+             TWO
+             PATTERN
+             RED
+             #f))
 (define o8
   (make-card (make-posn 1 2)
-        OVAL
-        THREE
-        PATTERN
-        GREEN
-        #f))
+             OVAL
+             THREE
+             PATTERN
+             GREEN
+             #f))
 
 (define loo (list o1 o2 o4 o5 o7 o8))
-;(draw-world loo)
+(define test2 (λ () (draw-world loo)))
 
 (define s1
   (make-card (make-posn 0 0)
-        SQUIGGLE
-        ONE
-        SOLID
-        RED
-        #f))
+             SQUIGGLE
+             ONE
+             SOLID
+             RED
+             #t))
 (define s2
   (make-card (make-posn 1 0)
-        DIAMOND
-        ONE
-        SOLID
-        RED
-        #f))
+             DIAMOND
+             ONE
+             SOLID
+             RED
+             #f))
 (define s4
   (make-card (make-posn 0 1)
-        SQUIGGLE
-        ONE
-        OUTLINE
-        GREEN
-        #f))
+             SQUIGGLE
+             ONE
+             OUTLINE
+             GREEN
+             #f))
 (define s5
   (make-card (make-posn 1 1)
-        SQUIGGLE
-        ONE
-        PATTERN
-        PURPLE
-        #f))
+             SQUIGGLE
+             ONE
+             PATTERN
+             PURPLE
+             #f))
 (define s7
   (make-card (make-posn 0 2)
-        SQUIGGLE
-        TWO
-        PATTERN
-        RED
-        #f))
+             SQUIGGLE
+             TWO
+             PATTERN
+             RED
+             #f))
 (define s8
   (make-card (make-posn 1 2)
-        SQUIGGLE
-        THREE
-        PATTERN
-        GREEN
-        #f))
+             SQUIGGLE
+             THREE
+             PATTERN
+             GREEN
+             #f))
 (define s9
   (make-card (make-posn 0 3)
-        SQUIGGLE
-        TWO
-        OUTLINE
-        PURPLE
-        #f))
+             SQUIGGLE
+             TWO
+             OUTLINE
+             PURPLE
+             #f))
 (define s10
   (make-card (make-posn 1 3)
-        SQUIGGLE
-        THREE
-        SOLID
-        PURPLE
-        #f))
+             SQUIGGLE
+             THREE
+             SOLID
+             PURPLE
+             #t))
 
 (define los (list s1 s2 s4 s5 s7 s8 s9 s10))
-;(draw-world los)
+(define test3 (λ () (draw-world los)))
