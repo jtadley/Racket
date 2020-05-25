@@ -66,7 +66,7 @@
 (define get-random
   (λ (s) 
      (let ([n (random 0 (add1 SIZE))])
-       (if (set-member? s n)
+       (if (and s (set-member? s n))
          (get-random s)
          n)))) 
 
@@ -102,9 +102,41 @@
                        (helper (add1 n) m))))])
        (helper 0 (make-vector SIZE)))))
 
+;; difficulty 0,1,2,3
+;; -1 = 0
+;;  0 ~ 42
+;;  1 ~ 51
+;;  2 ~ 56
+;;  3 ~ 58
+(define set-difficulty
+  (λ (m i)
+     (letrec ([n (if (zero? (add1 i))
+                   0
+                   (+ (random -2 3)
+                      (cond
+                        [(equal? i 0) 40]
+                        [(equal? i 1) 50]
+                        [(equal? i 2) 55]
+                        [(equal? i 3) 56])))]
+              [helper
+                (λ (m n)
+                   (cond
+                     [(zero? n) m]
+                     [else
+                       (let ([x (random 0 SIZE)]
+                             [y (random 0 SIZE)])
+                         (if (void? (vector-ref (vector-ref m y) x))
+                           (helper m n)
+                           (begin
+                             (vector-set!-xy m x y (void))
+                             (helper m (sub1 n))))) ]))])
+       (helper (gen (make-empty) 0 0 (set)) n))))
+
 (define run 
   (λ ()
      (define m (make-empty))
-     (gen m 0 0 (set))))
+     (gen m 0 0 (set))
+     (set-difficulty m -1)
+     ))
 
 (run)
